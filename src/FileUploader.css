@@ -1,0 +1,16 @@
+.file-uploader-container {
+  margin: 20px 0;
+  text-align: center;
+}
+
+.file-input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+
+.file-input:hover {
+  border-color: #888;
+}
