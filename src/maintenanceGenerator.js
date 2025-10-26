@@ -41,12 +41,17 @@ export class MaintenanceSheetGenerator {
 
   // Generate maintenance sheet (generic, not hardcoded to Q4)
   generateMaintenanceSheet(prevData, paymentRecords, waterChargesData, options = {}) {
+    console.log("generateMaintenanceSheet called");
+    console.log("prevData length:", prevData?.length);
+    console.log("paymentRecords length:", paymentRecords?.length);
+    console.log("waterChargesData length:", waterChargesData?.length);
     const {
       quarter = 'Current',
       dueDate = new Date().toISOString().split('T')[0],
       months = ['Month1', 'Month2', 'Month3'],
       dailyPenaltyRate = 20
     } = options;
+    console.log("Options:", { quarter, dueDate, months, dailyPenaltyRate });
 
     // Update penalty rate
     this.DAILY_PENALTY_RATE = dailyPenaltyRate;
@@ -54,16 +59,16 @@ export class MaintenanceSheetGenerator {
     const out = [];
 
     prevData.forEach((row) => {
-      if (!row['Flat No'] && !row['Flat No ']) return;
-      const flatKey = row['Flat No'] ? 'Flat No' : 'Flat No ';
+      if (!row['flatno'] && !row['flatno ']) return;
+      const flatKey = row['flatno'] ? 'flatno' : 'flatno ';
       const flatNo = String(row[flatKey]).trim();
-      const residentName = row['Resident Name'] || row['Resident Name'] || '';
-      const monthlyMaintenance = this.parseCurrency(row['Monthly'] || row['monthly'] || row['Monthly ']);
-      const prevBalance = this.parseCurrency(row['Balance'] || row['balance']);
-      const prevArrears = this.parseCurrency(row['Maintenance Arrears'] || row['Maintenance Arrears']);
+      const residentName = row['residentname'] || row['residentname'] || '';
+      const monthlyMaintenance = this.parseCurrency(row['monthly'] || row['monthly'] || row['monthly ']);
+      const prevBalance = this.parseCurrency(row['balance'] || row['balance']);
+      const prevArrears = this.parseCurrency(row['maintenancearrears'] || row['maintenancearrears']);
 
       const paymentRecord = paymentRecords.find(p => p.flatNo && String(p.flatNo).trim() === flatNo);
-      const waterCharges = waterChargesData.find(w => (w['Flat No'] === flatNo) || (w['Flat No '] === flatNo) || (w['Flat No'] && String(w['Flat No']).trim() === flatNo));
+      const waterCharges = waterChargesData.find(w => (w['flatno'] === flatNo) || (w['flatno '] === flatNo) || (w['flatno'] && String(w['flatno']).trim() === flatNo));
 
       let newArrears = 0;
       if (paymentRecord) {
@@ -99,6 +104,7 @@ export class MaintenanceSheetGenerator {
       out.push(outRow);
     });
 
+    console.log("Generated maintenance sheet with", out.length, "records");
     return out;
   }
 }

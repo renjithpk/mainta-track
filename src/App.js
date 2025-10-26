@@ -249,7 +249,7 @@ const App = () => {
         <div className="section-header">File Selection & Settings</div>
         <div className="controls-row">
           <CSVLoader 
-            onMaintenanceDataParsed={handlePreviousMaintenanceDataParsed} 
+            onPreviousMaintenanceDataParsed={handlePreviousMaintenanceDataParsed} 
             onBankTransactionsDataParsed={handleBankTransactionsDataParsed}
             onWaterChargesDataParsed={handleWaterChargesDataParsed}
           />
