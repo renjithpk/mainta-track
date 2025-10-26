@@ -54,14 +54,22 @@ function preprocessTransactions(bankTransactionsData) {
   console.log("Preprocessing bank transactions data");
   return bankTransactionsData.map((row) => {
     try {
+      // Clean up amount values - remove commas and quotes, convert to number
+      let transactionAmount = row.transactionamountinr;
+      if (typeof transactionAmount === 'string') {
+        // Remove commas, quotes and convert to number
+        transactionAmount = parseFloat(transactionAmount.replace(/[",]/g, ''));
+      }
+      
       return {
         ...row,
+        transactionamountinr: transactionAmount || 0,
         assigned: false,
         flat: extractFlatNumber(row.description),
       };
     } catch (error) {
       console.error("Error in preprocessTransactions for row:", row, error);
-      return { ...row, assigned: false, flat: { flatNumber: "None", confidence: "N" } };
+      return { ...row, transactionamountinr: 0, assigned: false, flat: { flatNumber: "None", confidence: "N" } };
     }
   });
 }
@@ -220,6 +228,7 @@ function buildResult(maintenance, transaction, confidence) {
     transactionid: transaction.transactionid,
     description: transaction.description,
     transactionamountinr: transaction.transactionamountinr,
+    transactiondate: transaction.transactiondate,
     confidence,
   };
 }

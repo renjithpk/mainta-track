@@ -22,8 +22,13 @@ const App = () => {
   const transactionColumns = [
     { id: "index", header: "Index", accessorKey: "index" },
     { id: "transactionid", header: "Transaction ID", accessorKey: "transactionid" },
+    { id: "transactiondate", header: "Transaction Date", accessorKey: "transactiondate" },
     { id: "description", header: "Description", accessorKey: "description" },
     { id: "transactionamountinr", header: "Transaction Amount (INR)", accessorKey: "transactionamountinr" },
+    { id: "withdrawalamtinr", header: "Withdrawal Amt (INR)", accessorKey: "withdrawalamtinr" },
+    { id: "depositamtinr", header: "Deposit Amt (INR)", accessorKey: "depositamtinr" },
+    { id: "tranid", header: "Tran. Id", accessorKey: "tranid" },
+    { id: "transactionremarks", header: "Transaction Remarks", accessorKey: "transactionremarks" },
   ];
 
   const resultColumns = [
@@ -32,6 +37,7 @@ const App = () => {
     { id: "name", header: "Resident Name", accessorKey: "name" },
     { id: "amount", header: "Amount", accessorKey: "amount" },
     { id: "transactionamountinr", header: "Transaction", accessorKey: "transactionamountinr" },
+    { id: "transactiondate", header: "Transaction Date", accessorKey: "transactiondate" },
     { id: "confidence", header: "Confidence", accessorKey: "confidence" },
     { id: "description", header: "Description", accessorKey: "description" },
     { id: "transactionid", header: "Transaction ID", accessorKey: "transactionid" },
@@ -47,22 +53,45 @@ const App = () => {
   };
 
   const handleBankTransactionsDataParsed = (data) => {
-    const errorMessage = validateHeaders(data, transactionColumns);
-    if (errorMessage) {
-      setError(errorMessage);
-      return;
-    }
-
     try {
-      const filteredData = data.filter(row => row["crdr"].toLowerCase() !== 'dr');
-      const indexedData = filteredData.map((row, index) => ({
+      let processedData = data;
+      
+      // Check if this is the new format (has withdrawal/deposit columns) or old format (has crdr column)
+      const hasNewFormat = data.length > 0 && (data[0].hasOwnProperty('withdrawalamtinr') || data[0].hasOwnProperty('depositamtinr'));
+      const hasOldFormat = data.length > 0 && data[0].hasOwnProperty('crdr');
+
+      if (hasNewFormat) {
+        // New format: process withdrawal/deposit columns
+        processedData = data
+          .filter(row => {
+            // Only include deposit transactions (credits) - skip withdrawals (debits)
+            return row.depositamtinr && row.depositamtinr !== "" && row.depositamtinr !== null;
+          })
+          .map(row => ({
+            ...row,
+            // Create unified transaction amount from deposit amount
+            transactionamountinr: row.depositamtinr,
+            // Map description from transaction remarks and map transaction ID
+            description: row.transactionremarks || row.description || "",
+            transactionid: row.tranid || row.transactionid || ""
+          }));
+      } else if (hasOldFormat) {
+        // Old format: filter out debit transactions
+        processedData = data.filter(row => row["crdr"].toLowerCase() !== 'dr');
+      } else {
+        setError("CSV format not recognized. Expected either new format with withdrawal/deposit columns or old format with cr/dr column.");
+        return;
+      }
+
+      const indexedData = processedData.map((row, index) => ({
         index: index + 1, // Adding a 1-based index
         ...row,
       }));
+      
       setBankTransactionsData(indexedData);
       setError(null); // Clear any previous errors
     } catch (err) {
-      setError("Failed to parse bank transactions CSV");
+      setError("Failed to parse bank transactions CSV: " + err.message);
     }
   };
 
