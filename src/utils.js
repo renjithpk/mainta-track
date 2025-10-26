@@ -1,11 +1,11 @@
 import levenshtein from 'fast-levenshtein';
 
-export const generateResultData = (maintenanceData, bankTransactionsData) => {
+export const generateResultData = (previousMaintenanceData, bankTransactionsData) => {
   console.log("Starting generateResultData");
   let result = [];
 
   try {
-    let remainingMaintenance = preprocessMaintenance(maintenanceData);
+    let remainingMaintenance = preprocessMaintenance(previousMaintenanceData);
     let remainingTransactions = preprocessTransactions(bankTransactionsData);
 
     // Chain multiple assignTransaction calls
@@ -34,9 +34,9 @@ export const generateResultData = (maintenanceData, bankTransactionsData) => {
   }
 };
 
-function preprocessMaintenance(maintenanceData) {
+function preprocessMaintenance(previousMaintenanceData) {
   console.log("Preprocessing maintenance data");
-  return maintenanceData.map((row) => {
+  return previousMaintenanceData.map((row) => {
     try {
       return {
         ...row,
@@ -233,10 +233,10 @@ function buildResult(maintenance, transaction, confidence) {
   };
 }
 
-function buildFilteredResponse(maintenanceData, bankTransactionsData, result) {
+function buildFilteredResponse(previousMaintenanceData, bankTransactionsData, result) {
   console.log("Building filtered response");
   const remainingTransactions = bankTransactionsData.filter((transaction) => !transaction.assigned);
-  const remainingMaintenance = maintenanceData.filter((row) => !row.assigned);
+  const remainingMaintenance = previousMaintenanceData.filter((row) => !row.assigned);
   return { remainingMaintenance, remainingTransactions, result };
 }
 

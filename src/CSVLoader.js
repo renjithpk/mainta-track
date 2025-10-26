@@ -1,10 +1,10 @@
 import React from "react";
 import FileUploader from "./FileUploader";
 
-const CSVLoader = ({ onMaintenanceDataParsed, onBankTransactionsDataParsed, onWaterChargesDataParsed }) => {
+const CSVLoader = ({ onPreviousMaintenanceDataParsed, onBankTransactionsDataParsed, onWaterChargesDataParsed }) => {
 
   const handleMaintenanceUpload = (data) => {
-    onMaintenanceDataParsed(data);
+    onPreviousMaintenanceDataParsed(data);
   };
 
   const handleBankTransactionsUpload = (data) => {

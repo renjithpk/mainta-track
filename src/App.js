@@ -9,7 +9,7 @@ import MaintenanceGeneratorUI from "./MaintenanceGeneratorUI";
 const App = () => {
   const [view, setView] = useState("result");
   const [tab, setTab] = useState("mapping");
-  const [maintenanceData, setMaintenanceData] = useState([]);
+  const [previousMaintenanceData, setPreviousMaintenanceData] = useState([]);
   const [bankTransactionsData, setBankTransactionsData] = useState([]);
   const [waterChargesData, setWaterChargesData] = useState([]);
   const [resultData, setResultData] = useState([]);
@@ -172,8 +172,7 @@ const App = () => {
     }
   };
 
-  const handleMaintenanceDataParsed = (data) => {
-    console.log("Maintenance data parsed:", data);
+  const handlePreviousMaintenanceDataParsed = (data) => {
     const errorMessage = validateHeaders(data, maintenanceColumns);
     if (errorMessage) {
       setError(errorMessage);
@@ -185,10 +184,10 @@ const App = () => {
         index: index + 1, // Adding a 1-based index
         ...row,
       }));
-      setMaintenanceData(indexedData);
+      setPreviousMaintenanceData(indexedData);
       setError(null); // Clear any previous errors
     } catch (err) {
-      setError("Failed to parse maintenance CSV");
+      setError("Failed to parse previous maintenance CSV");
     }
   };
 
@@ -206,29 +205,29 @@ const App = () => {
   };
 
   useEffect(() => {
-    if (maintenanceData.length === 0 || bankTransactionsData.length === 0) {
+    if (previousMaintenanceData.length === 0 || bankTransactionsData.length === 0) {
       return;
     }
-    const result = generateResultData(maintenanceData, bankTransactionsData);
+    const result = generateResultData(previousMaintenanceData, bankTransactionsData);
     console.log("Generated resultData:", result);
     setResultData(result);
-  }, [maintenanceData, bankTransactionsData]);
+  }, [previousMaintenanceData, bankTransactionsData]);
 
   useEffect(() => {
     if (tab === 'mapping') {
-      if (maintenanceData.length === 0 || bankTransactionsData.length === 0) {
+      if (previousMaintenanceData.length === 0 || bankTransactionsData.length === 0) {
         setTabError("Please upload Previous Maintenance Sheet and Bank Transactions CSV files.");
       } else {
         setTabError(null);
       }
     } else if (tab === 'maintenance') {
-      if (maintenanceData.length === 0 || waterChargesData.length === 0 || resultData.length === 0) {
+      if (previousMaintenanceData.length === 0 || waterChargesData.length === 0 || resultData.length === 0) {
         setTabError("Please upload Previous Maintenance Sheet, Water Charges CSV files, and ensure Bank Transaction Mapping results are available.");
       } else {
         setTabError(null);
       }
     }
-  }, [tab, maintenanceData, bankTransactionsData, waterChargesData, resultData]);
+  }, [tab, previousMaintenanceData, bankTransactionsData, waterChargesData, resultData]);
 
   const getViewTitle = () => {
     switch (view) {
@@ -245,12 +244,12 @@ const App = () => {
 
   return (
     <div className="App">
-      <h1>Maintenance Transaction Tracker</h1>
+      <h1>Maintenance Calculator</h1>
       <div className="card controls-card">
         <div className="section-header">File Selection & Settings</div>
         <div className="controls-row">
           <CSVLoader 
-            onMaintenanceDataParsed={handleMaintenanceDataParsed} 
+            onMaintenanceDataParsed={handlePreviousMaintenanceDataParsed} 
             onBankTransactionsDataParsed={handleBankTransactionsDataParsed}
             onWaterChargesDataParsed={handleWaterChargesDataParsed}
           />
@@ -311,7 +310,7 @@ const App = () => {
           {tabError && <div className="error-message">{tabError}</div>}
           <div className="card results-card">
             <div className="section-header">{getViewTitle()}</div>
-            {view === "maintenance" && <TableView columns={maintenanceColumns} data={maintenanceData} viewType="maintenance" />}
+            {view === "maintenance" && <TableView columns={maintenanceColumns} data={previousMaintenanceData} viewType="maintenance" />}
             {view === "transaction" && <TableView columns={transactionColumns} data={bankTransactionsData} viewType="transaction" />}
             {view === "result" && <TableView columns={visibleResultColumns} data={resultData} viewType="result" />}
           </div>
@@ -324,7 +323,7 @@ const App = () => {
             <strong>Instructions:</strong> Ensure all required CSV files are uploaded at the top. The Previous Maintenance Sheet is used for both mapping and calculation. Click 'Generate Maintenance Sheet' to create the new sheet for the current period.
           </div>
           {tabError && <div className="error-message">{tabError}</div>}
-          <MaintenanceGeneratorUI payments={resultData} prevMaintenance={maintenanceData} waterCharges={waterChargesData} dueDate={dueDate} dailyPenaltyRate={dailyPenaltyRate} />
+          <MaintenanceGeneratorUI payments={resultData} prevMaintenance={previousMaintenanceData} waterCharges={waterChargesData} dueDate={dueDate} dailyPenaltyRate={dailyPenaltyRate} />
         </div>
       )}
     </div>
