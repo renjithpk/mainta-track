@@ -49,9 +49,10 @@ export class MaintenanceSheetGenerator {
       quarter = 'Current',
       dueDate = new Date().toISOString().split('T')[0],
       months = ['Month1', 'Month2', 'Month3'],
-      dailyPenaltyRate = 20
+      dailyPenaltyRate = 20,
+      selectedColumns = null
     } = options;
-    console.log("Options:", { quarter, dueDate, months, dailyPenaltyRate });
+    console.log("Options:", { quarter, dueDate, months, dailyPenaltyRate, selectedColumns });
 
     // Update penalty rate
     this.DAILY_PENALTY_RATE = dailyPenaltyRate;
@@ -136,10 +137,26 @@ export class MaintenanceSheetGenerator {
         [`Water Bill ${months[1]}`]: `रु ${water2.toLocaleString('en-IN')}`,
         [`Water Bill ${months[2]}`]: `रु ${water3.toLocaleString('en-IN')}`,
         'Penalty': this.formatCurrency(penalty),
-        'Balance': this.formatCurrency(totalBalance)
+        'Balance': this.formatCurrency(totalBalance),
+        // Previous maintenance columns
+        'Previous Balance': this.formatCurrency(prevBalance),
+        'Previous Arrears': this.formatCurrency(prevArrears),
+        // Payment columns
+        'Transaction Amount': paymentRecord ? this.formatCurrency(this.parseCurrency(paymentRecord.transactionamountinr)) : '',
+        'Transaction ID': paymentRecord ? paymentRecord.transactionid || '' : '',
+        'Transaction Date': paymentRecord ? paymentRecord.transactiondate || '' : '',
+        'Description': paymentRecord ? paymentRecord.description || '' : '',
+        'Confidence': paymentRecord ? paymentRecord.confidence || '' : ''
       };
 
-      out.push(outRow);
+      // Filter columns based on selectedColumns
+      const filteredRow = selectedColumns 
+        ? Object.fromEntries(
+            Object.entries(outRow).filter(([key]) => selectedColumns.includes(key))
+          )
+        : outRow;
+
+      out.push(filteredRow);
     });
 
     console.log("Generated maintenance sheet with", out.length, "records");

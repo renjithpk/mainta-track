@@ -5,6 +5,53 @@ import TableView from './TableView';
 const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDate, dailyPenaltyRate }) => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  
+  // Default columns (must match the keys generated in maintenanceGenerator.js)
+  const defaultColumns = [
+    'Flat No',
+    'Resident Name', 
+    'Monthly',
+    'Current Maintenance',
+    'Maintenance Arrears',
+    'Water Bill Month1',
+    'Water Bill Month2', 
+    'Water Bill Month3',
+    'Penalty',
+    'Balance',
+    // Previous maintenance columns
+    'Previous Balance',
+    'Previous Arrears',
+    // Payment columns
+    'Transaction Amount',
+    'Transaction ID',
+    'Transaction Date',
+    'Description',
+    'Confidence'
+  ];
+  
+  // Original columns that were selected by default
+  const originalColumns = [
+    'Flat No',
+    'Resident Name', 
+    'Monthly',
+    'Current Maintenance',
+    'Maintenance Arrears',
+    'Water Bill Month1',
+    'Water Bill Month2', 
+    'Water Bill Month3',
+    'Penalty',
+    'Balance'
+  ];
+  
+  const [selectedColumns, setSelectedColumns] = useState(originalColumns);
+
+  const handleColumnToggle = (column) => {
+    setSelectedColumns(prev => 
+      prev.includes(column) 
+        ? prev.filter(c => c !== column)
+        : [...prev, column]
+    );
+  };
 
   const handleGenerate = async () => {
     console.log("Generate button clicked");
@@ -30,7 +77,8 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
         {
           quarter: "Current", // Not hardcoded
           dueDate: dueDate,
-          dailyPenaltyRate: dailyPenaltyRate
+          dailyPenaltyRate: dailyPenaltyRate,
+          selectedColumns: selectedColumns
         }
       );
       console.log("Generated result:", generated);
@@ -43,6 +91,21 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
 
   return (
     <div className="generator-ui">
+      <div className="column-selection">
+        <h4>Select Columns to Include:</h4>
+        <div className="column-checkboxes">
+          {defaultColumns.map(column => (
+            <label key={column} className="column-checkbox">
+              <input
+                type="checkbox"
+                checked={selectedColumns.includes(column)}
+                onChange={() => handleColumnToggle(column)}
+              />
+              {column}
+            </label>
+          ))}
+        </div>
+      </div>
       <button className="generator-btn" onClick={handleGenerate}>Generate Maintenance Sheet</button>
       {error && <div className="error-message">{error}</div>}
       {result && result.length > 0 && (
