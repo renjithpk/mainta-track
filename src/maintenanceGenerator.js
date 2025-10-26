@@ -50,9 +50,10 @@ export class MaintenanceSheetGenerator {
       dueDate = new Date().toISOString().split('T')[0],
       months = ['Month1', 'Month2', 'Month3'],
       dailyPenaltyRate = 20,
-      selectedColumns = null
+      selectedColumns = null,
+      columnsOrder = null
     } = options;
-    console.log("Options:", { quarter, dueDate, months, dailyPenaltyRate, selectedColumns });
+  console.log("Options:", { quarter, dueDate, months, dailyPenaltyRate, selectedColumns });
 
     // Update penalty rate
     this.DAILY_PENALTY_RATE = dailyPenaltyRate;
@@ -98,7 +99,7 @@ export class MaintenanceSheetGenerator {
 
     const out = [];
 
-    prevData.forEach((row) => {
+  prevData.forEach((row) => {
       if (!row['flatno'] && !row['flatno ']) return;
       const flatKey = row['flatno'] ? 'flatno' : 'flatno ';
       const flatNo = String(row[flatKey]).trim();
@@ -129,7 +130,7 @@ export class MaintenanceSheetGenerator {
 
       const waterTotal = water1 + water2 + water3;
 
-      const outRow = {
+  const outRow = {
         'Flat No': flatNo,
         'Resident Name': residentName,
         'Monthly': this.formatCurrency(monthlyMaintenance),
@@ -152,11 +153,25 @@ export class MaintenanceSheetGenerator {
       };
 
       // Filter columns based on selectedColumns
-      const filteredRow = selectedColumns 
-        ? Object.fromEntries(
-            Object.entries(outRow).filter(([key]) => selectedColumns.includes(key))
-          )
+      // Filter and order columns for output. If a `columnsOrder` array is provided
+      // use it to decide header order (but only include keys that are selected).
+      const filteredRow = selectedColumns
+        ? (Array.isArray(columnsOrder)
+            ? columnsOrder.reduce((acc, key) => {
+                if (selectedColumns.includes(key) && outRow.hasOwnProperty(key)) {
+                  acc[key] = outRow[key];
+                }
+                return acc;
+              }, {})
+            : selectedColumns.reduce((acc, key) => {
+                if (outRow.hasOwnProperty(key)) {
+                  acc[key] = outRow[key];
+                }
+                return acc;
+              }, {}))
         : outRow;
+
+      // intentionally keep logs minimal — detailed debug logs removed
 
       out.push(filteredRow);
     });

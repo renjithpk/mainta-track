@@ -6,8 +6,8 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   
-  // Default columns (must match the keys generated in maintenanceGenerator.js)
-  const defaultColumns = [
+  // Column order (all available columns in the intended display order)
+  const columnsOrder = [
     'Flat No',
     'Resident Name',
     'Monthly',
@@ -26,28 +26,29 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
     'Penalty',
     'Balance'
   ];
-  
-  // Original columns that were selected by default
-  const originalColumns = [
+
+  // Default selections shown when user clicks "Default"
+  const defaultSelections = [
     'Previous Maintenance',
     'Transaction Amount',
     'Flat No',
-    'Resident Name', 
+    'Resident Name',
     'Current Maintenance',
     'Water Bill Total',
     'Penalty',
     'Balance'
   ];
-  
-  const [selectedColumns, setSelectedColumns] = useState(originalColumns);
+
+  // Currently selected columns (drives generator and table order)
+  const [columnSelected, setColumnSelected] = useState(defaultSelections);
 
   const handleResetToDefault = () => {
-    setSelectedColumns(originalColumns);
+    setColumnSelected(defaultSelections);
   };
 
   const handleColumnToggle = (column) => {
-    setSelectedColumns(prev => 
-      prev.includes(column) 
+    setColumnSelected(prev =>
+      prev.includes(column)
         ? prev.filter(c => c !== column)
         : [...prev, column]
     );
@@ -69,7 +70,7 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
     try {
       // Generate maintenance sheet
       const generator = new MaintenanceSheetGenerator({ dailyPenaltyRate });
-      console.log("Generator created with dailyPenaltyRate:", dailyPenaltyRate);
+  console.log("Generator created with dailyPenaltyRate:", dailyPenaltyRate);
       const generated = generator.generateMaintenanceSheet(
         prevMaintenance,
         payments,
@@ -78,7 +79,8 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
           quarter: "Current", // Not hardcoded
           dueDate: dueDate,
           dailyPenaltyRate: dailyPenaltyRate,
-          selectedColumns: selectedColumns
+          selectedColumns: columnSelected,
+          columnsOrder: columnsOrder
         }
       );
       console.log("Generated result:", generated);
@@ -97,11 +99,11 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
           <button className="default-btn" onClick={handleResetToDefault}>Default</button>
         </div>
         <div className="column-checkboxes">
-          {defaultColumns.map(column => (
+          {columnsOrder.map(column => (
             <label key={column} className="column-checkbox">
               <input
                 type="checkbox"
-                checked={selectedColumns.includes(column)}
+                checked={columnSelected.includes(column)}
                 onChange={() => handleColumnToggle(column)}
               />
               {column}
