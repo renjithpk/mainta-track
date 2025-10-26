@@ -1,23 +1,23 @@
-import React, { useState } from "react";
+import React from "react";
 import FileUploader from "./FileUploader";
 
-const CSVLoader = ({ onMaintenanceDataParsed, onBankTransactionsDataParsed }) => {
-  const [maintenanceData, setMaintenanceData] = useState([]);
-  const [bankTransactionsData, setBankTransactionsData] = useState([]);
+const CSVLoader = ({ onMaintenanceDataParsed, onBankTransactionsDataParsed, onWaterChargesDataParsed }) => {
 
   const handleMaintenanceUpload = (data) => {
-    setMaintenanceData(data);
     onMaintenanceDataParsed(data);
   };
 
   const handleBankTransactionsUpload = (data) => {
-    setBankTransactionsData(data);
     onBankTransactionsDataParsed(data);
+  };
+
+  const handleWaterChargesUpload = (data) => {
+    onWaterChargesDataParsed(data);
   };
 
   return (
     <div>
-      <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: "20px", alignItems: "center", flexWrap: "wrap" }}>
         <div>
           <h3>Maintenance Sheet</h3>
           <FileUploader onDataParsed={handleMaintenanceUpload} />
@@ -25,6 +25,10 @@ const CSVLoader = ({ onMaintenanceDataParsed, onBankTransactionsDataParsed }) =>
         <div>
           <h3>Bank Transactions</h3>
           <FileUploader onDataParsed={handleBankTransactionsUpload} />
+        </div>
+        <div>
+          <h3>Water Charges</h3>
+          <FileUploader onDataParsed={handleWaterChargesUpload} />
         </div>
       </div>
     </div>

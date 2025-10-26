@@ -30,3 +30,4 @@ Thumbs.db
 # Package lock files (optional)
 package-lock.json
 yarn.lock
+q4_inputs/

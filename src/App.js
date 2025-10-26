@@ -11,8 +11,12 @@ const App = () => {
   const [tab, setTab] = useState("mapping");
   const [maintenanceData, setMaintenanceData] = useState([]);
   const [bankTransactionsData, setBankTransactionsData] = useState([]);
+  const [waterChargesData, setWaterChargesData] = useState([]);
   const [resultData, setResultData] = useState([]);
   const [error, setError] = useState(null); // State variable for error messages
+  const [tabError, setTabError] = useState(null); // State for tab-specific errors
+  const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
+  const [dailyPenaltyRate, setDailyPenaltyRate] = useState(20);
 
   const maintenanceColumns = [
     { id: "index", header: "Index", accessorKey: "index" },
@@ -125,6 +129,7 @@ const App = () => {
   };
 
   const handleBankTransactionsDataParsed = (data) => {
+    console.log("Bank transactions data parsed:", data);
     try {
       let processedData = data;
       
@@ -168,6 +173,7 @@ const App = () => {
   };
 
   const handleMaintenanceDataParsed = (data) => {
+    console.log("Maintenance data parsed:", data);
     const errorMessage = validateHeaders(data, maintenanceColumns);
     if (errorMessage) {
       setError(errorMessage);
@@ -186,12 +192,43 @@ const App = () => {
     }
   };
 
+  const handleWaterChargesDataParsed = (data) => {
+    try {
+      const indexedData = data.map((row, index) => ({
+        index: index + 1, // Adding a 1-based index
+        ...row,
+      }));
+      setWaterChargesData(indexedData);
+      setError(null); // Clear any previous errors
+    } catch (err) {
+      setError("Failed to parse water charges CSV");
+    }
+  };
+
   useEffect(() => {
     if (maintenanceData.length === 0 || bankTransactionsData.length === 0) {
       return;
     }
-    setResultData(generateResultData(maintenanceData, bankTransactionsData));
-  }, [maintenanceData, bankTransactionsData, view]);
+    const result = generateResultData(maintenanceData, bankTransactionsData);
+    console.log("Generated resultData:", result);
+    setResultData(result);
+  }, [maintenanceData, bankTransactionsData]);
+
+  useEffect(() => {
+    if (tab === 'mapping') {
+      if (maintenanceData.length === 0 || bankTransactionsData.length === 0) {
+        setTabError("Please upload Maintenance Sheet and Bank Transactions CSV files.");
+      } else {
+        setTabError(null);
+      }
+    } else if (tab === 'maintenance') {
+      if (maintenanceData.length === 0 || waterChargesData.length === 0 || resultData.length === 0) {
+        setTabError("Please upload Maintenance Sheet, Water Charges CSV files, and ensure Bank Transaction Mapping results are available.");
+      } else {
+        setTabError(null);
+      }
+    }
+  }, [tab, maintenanceData, bankTransactionsData, waterChargesData, resultData]);
 
   const getViewTitle = () => {
     switch (view) {
@@ -209,70 +246,87 @@ const App = () => {
   return (
     <div className="App">
       <h1>Maintenance Transaction Tracker</h1>
+      <div className="card controls-card">
+        <div className="section-header">File Selection & Settings</div>
+        <div className="controls-row">
+          <CSVLoader 
+            onMaintenanceDataParsed={handleMaintenanceDataParsed} 
+            onBankTransactionsDataParsed={handleBankTransactionsDataParsed}
+            onWaterChargesDataParsed={handleWaterChargesDataParsed}
+          />
+        </div>
+        <div className="settings-row" style={{ display: 'flex', gap: '20px', alignItems: 'center', marginTop: '10px' }}>
+          <label>
+            Due Date:
+            <input 
+              type="date" 
+              value={dueDate} 
+              onChange={(e) => setDueDate(e.target.value)} 
+              style={{ marginLeft: '5px' }}
+            />
+          </label>
+          <label>
+            Penalty per Day (₹):
+            <input 
+              type="number" 
+              value={dailyPenaltyRate} 
+              onChange={(e) => setDailyPenaltyRate(Number(e.target.value))} 
+              min="0" 
+              style={{ marginLeft: '5px', width: '80px' }}
+            />
+          </label>
+        </div>
+        {error && <div className="error-message">{error}</div>}
+        <div className="description-text">
+          <strong>Instructions:</strong> Upload all required CSV files: Maintenance Sheet (used for both mapping and calculation), Bank Transactions, and Water Charges for processing.
+        </div>
+      </div>
       <div className="tabs-container">
         <button className={`tab-btn${tab === 'mapping' ? ' active' : ''}`} onClick={() => setTab('mapping')}>1. Bank Transaction Mapping</button>
         <button className={`tab-btn${tab === 'maintenance' ? ' active' : ''}`} onClick={() => setTab('maintenance')}>2. Maintenance Calculation</button>
       </div>
-      <div className="tab-content">
-        {tab === 'mapping' && (
-          <>
-            <div className="card controls-card">
-              <div className="section-header">Transaction Mapping</div>
-              <div className="controls-row">
-                <CSVLoader 
-                  onMaintenanceDataParsed={handleMaintenanceDataParsed} 
-                  onBankTransactionsDataParsed={handleBankTransactionsDataParsed} 
-                />
-              </div>
-              {error && <div className="error-message">{error}</div>}
-              <div className="description-text">
-                <strong>Instructions:</strong> Download the matching results CSV, manually adjust flat numbers if needed, then use the result along with previous quarter maintenance and water charges to generate the next maintenance sheet.
-              </div>
-            </div>
-            <div className="card results-card">
-              <div className="section-header">{getViewTitle()}</div>
-              <div className="controls-row">
-                <RadioButtons view={view} setView={setView} />
-              </div>
-              {view === "maintenance" && <TableView columns={maintenanceColumns} data={maintenanceData} viewType="maintenance" />}
-              {view === "transaction" && <TableView columns={transactionColumns} data={bankTransactionsData} viewType="transaction" />}
-              {view === "result" && (
-                <div style={{ width: '100%' }}>
-                  <div style={{ marginBottom: 12, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <div style={{ fontWeight: 600 }}>Columns:</div>
-                    {optionalResultColumns.map((col) => {
-                      const checked = visibleResultColumns.some(c => c.accessorKey === col.accessorKey);
-                      const disabled = col.accessorKey === 'confidence'; // keep status/default column non-removable
-                      return (
-                        <label key={col.accessorKey} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            disabled={disabled}
-                            onChange={() => toggleResultColumn(col)}
-                          />
-                          <span>{col.header}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-
-                  <TableView columns={visibleResultColumns} data={resultData} viewType="result" />
-                </div>
-              )}
-            </div>
-          </>
-        )}
-        {tab === 'maintenance' && (
-          <div className="card generator-card">
-            <div className="section-header">Maintenance Sheet Generator</div>
-            <div className="description-text">
-              <strong>Instructions:</strong> Upload the previous maintenance sheet, payment mapping CSV, and water charges CSV. Click 'Generate Maintenance Sheet' to create the new sheet for the current period. You can use this tool for any quarter or period.
-            </div>
-            <MaintenanceGeneratorUI />
+      {tab === 'mapping' && (
+        <>
+          <div className="controls-row">
+            <RadioButtons view={view} setView={setView} />
           </div>
-        )}
-      </div>
+          <div style={{ marginBottom: 12, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ fontWeight: 600 }}>Columns:</div>
+            {optionalResultColumns.map((col) => {
+              const checked = visibleResultColumns.some(c => c.accessorKey === col.accessorKey);
+              const disabled = col.accessorKey === 'confidence'; // keep status/default column non-removable
+              return (
+                <label key={col.accessorKey} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={disabled}
+                    onChange={() => toggleResultColumn(col)}
+                  />
+                  <span>{col.header}</span>
+                </label>
+              );
+            })}
+          </div>
+          {tabError && <div className="error-message">{tabError}</div>}
+          <div className="card results-card">
+            <div className="section-header">{getViewTitle()}</div>
+            {view === "maintenance" && <TableView columns={maintenanceColumns} data={maintenanceData} viewType="maintenance" />}
+            {view === "transaction" && <TableView columns={transactionColumns} data={bankTransactionsData} viewType="transaction" />}
+            {view === "result" && <TableView columns={visibleResultColumns} data={resultData} viewType="result" />}
+          </div>
+        </>
+      )}
+      {tab === 'maintenance' && (
+        <div className="card generator-card">
+          <div className="section-header">Maintenance Sheet Generator</div>
+          <div className="description-text">
+            <strong>Instructions:</strong> Ensure all required CSV files are uploaded at the top. The Maintenance Sheet is used for both mapping and calculation. Click 'Generate Maintenance Sheet' to create the new sheet for the current period.
+          </div>
+          {tabError && <div className="error-message">{tabError}</div>}
+          <MaintenanceGeneratorUI payments={resultData} prevMaintenance={maintenanceData} waterCharges={waterChargesData} dueDate={dueDate} dailyPenaltyRate={dailyPenaltyRate} />
+        </div>
+      )}
     </div>
   );
 };

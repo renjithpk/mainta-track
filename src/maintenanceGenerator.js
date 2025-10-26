@@ -2,9 +2,9 @@
 // Pure JS class for use in the React app (no fs or Papa dependencies)
 
 export class MaintenanceSheetGenerator {
-  constructor() {
-    this.FIXED_PENALTY_ARREARS = 4300; // Fixed penalty for significant arrears
-    this.DAILY_PENALTY_RATE = 20; // ₹20 per day
+  constructor(options = {}) {
+    this.FIXED_PENALTY_ARREARS = 4300; // Fixed penalty for significant arrears (kept but not used)
+    this.DAILY_PENALTY_RATE = options.dailyPenaltyRate || 20; // ₹20 per day
     this.GRACE_PERIOD_DAYS = 30; // 30 days grace period
   }
 
@@ -21,20 +21,12 @@ export class MaintenanceSheetGenerator {
 
   // Calculate penalty based on payment status and arrears
   calculatePenalty(flat, paymentRecord, dueDate) {
-    // Rule 1: Fixed penalty for significant arrears (> ₹5000)
-    if (flat.arrears > 5000) {
-      return this.FIXED_PENALTY_ARREARS;
-    }
-
-    // Rule 2: No payment made
+    // Only apply time-based penalty for late payments
     if (!paymentRecord) {
-      if (flat.arrears > 0) {
-        return this.FIXED_PENALTY_ARREARS;
-      }
-      return 0;
+      return 0; // No penalty if no payment record
     }
 
-    // Rule 3: Payment made - calculate time-based penalty
+    // Payment made - calculate time-based penalty
     const paymentDate = new Date(paymentRecord.transactionDate);
     const dueDateObj = new Date(dueDate);
     const daysLate = Math.ceil((paymentDate - dueDateObj) / (1000 * 60 * 60 * 24));
@@ -52,8 +44,12 @@ export class MaintenanceSheetGenerator {
     const {
       quarter = 'Current',
       dueDate = new Date().toISOString().split('T')[0],
-      months = ['Month1', 'Month2', 'Month3']
+      months = ['Month1', 'Month2', 'Month3'],
+      dailyPenaltyRate = 20
     } = options;
+
+    // Update penalty rate
+    this.DAILY_PENALTY_RATE = dailyPenaltyRate;
 
     const out = [];
 
@@ -66,12 +62,12 @@ export class MaintenanceSheetGenerator {
       const prevBalance = this.parseCurrency(row['Balance'] || row['balance']);
       const prevArrears = this.parseCurrency(row['Maintenance Arrears'] || row['Maintenance Arrears']);
 
-      const paymentRecord = paymentRecords.find(p => p['Flat No'] && String(p['Flat No']).trim() === flatNo);
+      const paymentRecord = paymentRecords.find(p => p.flatNo && String(p.flatNo).trim() === flatNo);
       const waterCharges = waterChargesData.find(w => (w['Flat No'] === flatNo) || (w['Flat No '] === flatNo) || (w['Flat No'] && String(w['Flat No']).trim() === flatNo));
 
       let newArrears = 0;
       if (paymentRecord) {
-        const paidAmount = this.parseCurrency(paymentRecord['Amount'] || paymentRecord['Amount'] || paymentRecord['amount']);
+        const paidAmount = this.parseCurrency(paymentRecord.transactionamountinr);
         newArrears = Math.max(0, prevBalance - paidAmount);
       } else {
         newArrears = prevBalance;
@@ -83,7 +79,7 @@ export class MaintenanceSheetGenerator {
       const water2 = waterCharges ? this.parseCurrency(waterCharges[months[1]] || waterCharges['Aug'] || waterCharges['Aug']) : 0;
       const water3 = waterCharges ? this.parseCurrency(waterCharges[months[2]] || waterCharges['Sept'] || waterCharges['Sept']) : 0;
 
-      const penalty = this.calculatePenalty({ flatNo, arrears: newArrears, prevBalance }, paymentRecord ? { transactionDate: paymentRecord['Transaction Date'], amount: this.parseCurrency(paymentRecord['Amount'] || paymentRecord['amount']) } : null, dueDate);
+      const penalty = this.calculatePenalty({ flatNo, arrears: newArrears, prevBalance }, paymentRecord ? { transactionDate: paymentRecord.transactiondate, amount: this.parseCurrency(paymentRecord.transactionamountinr) } : null, dueDate);
 
       const totalBalance = quarterly + newArrears + water1 + water2 + water3 + penalty;
 
