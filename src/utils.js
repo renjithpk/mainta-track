@@ -41,7 +41,8 @@ function preprocessMaintenance(previousMaintenanceData) {
       return {
         ...row,
         balance: row?.balance?.replace(/[^0-9.]/g, ""),
-        assigned: false,
+        // Preserve assigned flag if present (allow manual assignments to persist)
+        assigned: row?.assigned === true,
       };
     } catch (error) {
       console.error("Error in preprocessMaintenance for row:", row, error);
@@ -64,8 +65,10 @@ function preprocessTransactions(bankTransactionsData) {
       return {
         ...row,
         transactionamountinr: transactionAmount || 0,
-        assigned: false,
-        flat: extractFlatNumber(row.description),
+        // Preserve assigned flag if row already contains it (manual assignment)
+        assigned: row?.assigned === true,
+        // If flat was previously set (manual assignment), preserve it; otherwise extract
+        flat: row?.flat || extractFlatNumber(row.description),
       };
     } catch (error) {
       console.error("Error in preprocessTransactions for row:", row, error);
@@ -230,6 +233,13 @@ function buildResult(maintenance, transaction, confidence) {
     transactionamountinr: transaction.transactionamountinr,
     transactiondate: transaction.transactiondate,
     confidence,
+    // explicit status and assignment metadata for UI editability
+    status: (maintenance.assigned && transaction.assigned) ? 'confirmed' : 'unresolved',
+    assignedFlat: maintenance.flatno || '',
+    assignedTransactionId: transaction.transactionid || '',
+    assignedBy: '',
+    assignedAt: '',
+    assignReason: ''
   };
 }
 

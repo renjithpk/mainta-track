@@ -42,6 +42,7 @@ const App = () => {
     { id: "flat", header: "Flat No", accessorKey: "flatNo" },
     { id: "name", header: "Resident Name", accessorKey: "name" },
     { id: "amount", header: "Amount", accessorKey: "amount" },
+    { id: "assign", header: "Assign Flat", accessorKey: "assignFlat" },
     { id: "transactionamountinr", header: "Transaction", accessorKey: "transactionamountinr" },
     { id: "transactiondate", header: "Transaction Date", accessorKey: "transactiondate" },
     { id: "confidence", header: "Confidence", accessorKey: "confidence" },
@@ -213,6 +214,111 @@ const App = () => {
     setResultData(result);
   }, [previousMaintenanceData, bankTransactionsData]);
 
+  // Compute available (unallocated) flats based on previous maintenance data
+  const availableFlats = React.useMemo(() => {
+    const allFlats = previousMaintenanceData.map(r => (r.flatno || '').toString().trim()).filter(Boolean);
+    const confirmed = new Set(resultData.filter(r => r.status === 'confirmed').map(r => (r.assignedFlat || r.flatNo || '').toString().trim()));
+    return allFlats.filter(f => f && !confirmed.has(f));
+  }, [previousMaintenanceData, resultData]);
+
+  // Handler to assign a flat to a result row (in-memory, optimistic)
+  const handleAssignFlat = (rowIndex, selectedFlat) => {
+    console.debug('handleAssignFlat called', { rowIndex, selectedFlat });
+    if (!selectedFlat) return;
+    const row = resultData[rowIndex];
+    if (!row) return;
+    if (row.status === 'confirmed') {
+      // already confirmed; do nothing
+      alert('This row is already confirmed and cannot be reassigned here.');
+      return;
+    }
+
+    // If this row has no flat (it's a transaction-only row), try to move the transaction
+    // to the corresponding maintenance row that has the selectedFlat.
+    const newResultData = [...resultData];
+    const sourceRow = { ...row };
+    const txId = sourceRow.transactionid;
+
+    if (!sourceRow.flatNo || sourceRow.flatNo.toString().trim() === '') {
+      // find maintenance row that matches selectedFlat and currently has no transaction
+      const targetIndex = newResultData.findIndex(r => r.flatNo && r.flatNo.toString().trim() === selectedFlat && (!r.transactionid || r.transactionid === ""));
+      console.debug('transaction-only source; targetIndex:', targetIndex);
+      if (targetIndex !== -1) {
+        const targetRow = { ...newResultData[targetIndex] };
+        // Move transaction fields into the target maintenance row
+        targetRow.transactionid = sourceRow.transactionid || '';
+        targetRow.transactionamountinr = sourceRow.transactionamountinr || '';
+        targetRow.transactiondate = sourceRow.transactiondate || '';
+        targetRow.description = sourceRow.description || '';
+        targetRow.confidence = 'manually assigned';
+        targetRow.status = 'confirmed';
+        targetRow.assignedFlat = selectedFlat;
+        targetRow.assignedBy = 'local';
+        targetRow.assignedAt = new Date().toISOString();
+
+        // Also update the source previousMaintenanceData to persist assignment when reprocessing
+        const updatedPrevMaintenance = previousMaintenanceData.map(pm => {
+          try {
+            if (pm && pm.flatno && pm.flatno.toString().trim() === selectedFlat) {
+              return { ...pm, transactionid: targetRow.transactionid, transactionamountinr: targetRow.transactionamountinr, transactiondate: targetRow.transactiondate, description: targetRow.description, assigned: true };
+            }
+            return pm;
+          } catch (err) {
+            return pm;
+          }
+        });
+
+        // Clear transaction fields from the source transaction-only row
+        sourceRow.transactionid = '';
+        sourceRow.transactionamountinr = '';
+        sourceRow.transactiondate = '';
+        sourceRow.description = '';
+        sourceRow.status = 'resolved';
+
+        newResultData[targetIndex] = targetRow;
+        newResultData[rowIndex] = sourceRow;
+
+        // Update bank transactions assigned flag
+        const newBankTx = bankTransactionsData.map(tx => {
+          if (tx.transactionid && tx.transactionid === txId) {
+            return { ...tx, assigned: true, flat: { flatNumber: selectedFlat.replace(/[^0-9]/g, ''), confidence: 'M' } };
+          }
+          return tx;
+        });
+
+        console.debug('Applying moved transaction to previousMaintenanceData and bankTransactionsData');
+        setPreviousMaintenanceData(updatedPrevMaintenance);
+        setResultData(newResultData);
+        setBankTransactionsData(newBankTx);
+        return;
+      }
+      // if no target found, fall through to attach to the source row itself
+    }
+
+    // Default: attach to the current row
+    const updatedRow = { ...sourceRow };
+    updatedRow.assignedFlat = selectedFlat;
+    updatedRow.flatNo = selectedFlat; // keep display in sync
+    updatedRow.status = 'confirmed';
+    updatedRow.confidence = 'manually assigned';
+    updatedRow.assignedBy = 'local';
+    updatedRow.assignedAt = new Date().toISOString();
+
+    newResultData[rowIndex] = updatedRow;
+
+    // Update corresponding bankTransactionsData if transactionid exists
+    const newBankTx = bankTransactionsData.map(tx => {
+      if (tx.transactionid && tx.transactionid === txId) {
+        return { ...tx, assigned: true, flat: { flatNumber: selectedFlat.replace(/[^0-9]/g, ''), confidence: 'M' } };
+      }
+      return tx;
+    });
+
+    console.debug('Applying assignment to resultData and bankTransactionsData');
+    setResultData(newResultData);
+    setBankTransactionsData(newBankTx);
+  };
+
   useEffect(() => {
     if (tab === 'mapping') {
       if (previousMaintenanceData.length === 0 || bankTransactionsData.length === 0) {
@@ -312,7 +418,7 @@ const App = () => {
             <div className="section-header">{getViewTitle()}</div>
             {view === "maintenance" && <TableView columns={maintenanceColumns} data={previousMaintenanceData} viewType="maintenance" />}
             {view === "transaction" && <TableView columns={transactionColumns} data={bankTransactionsData} viewType="transaction" />}
-            {view === "result" && <TableView columns={visibleResultColumns} data={resultData} viewType="result" />}
+            {view === "result" && <TableView columns={visibleResultColumns} data={resultData} viewType="result" onAssignFlat={handleAssignFlat} availableFlats={availableFlats} />}
           </div>
         </>
       )}
