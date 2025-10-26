@@ -13,9 +13,10 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
     'Monthly',
     'Current Maintenance',
     'Maintenance Arrears',
-    'Water Bill Month1',
-    'Water Bill Month2', 
-    'Water Bill Month3',
+    'Water Bill July',
+    'Water Bill Aug', 
+    'Water Bill Sept',
+    'Water Bill Total',
     'Penalty',
     'Balance',
     // Previous maintenance columns
@@ -33,17 +34,18 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
   const originalColumns = [
     'Flat No',
     'Resident Name', 
-    'Monthly',
     'Current Maintenance',
     'Maintenance Arrears',
-    'Water Bill Month1',
-    'Water Bill Month2', 
-    'Water Bill Month3',
+    'Water Bill Total',
     'Penalty',
     'Balance'
   ];
   
   const [selectedColumns, setSelectedColumns] = useState(originalColumns);
+
+  const handleResetToDefault = () => {
+    setSelectedColumns(originalColumns);
+  };
 
   const handleColumnToggle = (column) => {
     setSelectedColumns(prev => 
@@ -92,7 +94,10 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
   return (
     <div className="generator-ui">
       <div className="column-selection">
-        <h4>Select Columns to Include:</h4>
+        <div className="column-selection-header">
+          <h4>Select Columns to Include:</h4>
+          <button className="default-btn" onClick={handleResetToDefault}>Default</button>
+        </div>
         <div className="column-checkboxes">
           {defaultColumns.map(column => (
             <label key={column} className="column-checkbox">

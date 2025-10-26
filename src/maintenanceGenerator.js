@@ -60,6 +60,7 @@ export class MaintenanceSheetGenerator {
     // Extract month names dynamically from water charges data
     // Water charges should have columns: flatno, month-july, month-aug, month-sept, total
     let waterMonths = [];
+    let waterMonthsDisplay = ['July', 'Aug', 'Sept']; // Default display names
     if (waterChargesData && waterChargesData.length > 0) {
       const headers = Object.keys(waterChargesData[0]);
       console.log("Water charges headers (excluding index):", headers.slice(1));
@@ -84,16 +85,16 @@ export class MaintenanceSheetGenerator {
         throw new Error(`Water charges CSV columns 3-5 must have 'Month-' prefix or be month names (july, aug, sept). Invalid columns: ${invalidColumns.join(', ')}`);
       }
       
-      // Extract month names (remove 'month' prefix if present, case insensitive)
-      waterMonths = monthColumns.map(col => {
+      // Extract month keys for data access and display names for columns
+      waterMonths = monthColumns; // Full keys like ["monthjuly", "monthaug", "monthsept"]
+      waterMonthsDisplay = monthColumns.map(col => {
         const lowerCol = col.toLowerCase();
-        return lowerCol.startsWith('month') ? lowerCol.replace(/^month/, '') : lowerCol;
-      });
+        const monthName = lowerCol.startsWith('month') ? lowerCol.replace(/^month/, '') : lowerCol;
+        return monthName.charAt(0).toUpperCase() + monthName.slice(1); // Capitalize first letter
+      }); // Display names like ["July", "Aug", "Sept"]
     } else {
-      waterMonths = ['july', 'aug', 'sept']; // fallback
+      waterMonths = ['monthjuly', 'monthaug', 'monthsept']; // fallback keys
     }
-
-    console.log("Extracted water months:", waterMonths);
 
     const out = [];
 
@@ -127,15 +128,18 @@ export class MaintenanceSheetGenerator {
 
       const totalBalance = quarterly + newArrears + water1 + water2 + water3 + penalty;
 
+      const waterTotal = water1 + water2 + water3;
+
       const outRow = {
         'Flat No': flatNo,
         'Resident Name': residentName,
         'Monthly': this.formatCurrency(monthlyMaintenance),
         [`${quarter} Maintenance`]: this.formatCurrency(quarterly),
         'Maintenance Arrears': this.formatCurrency(newArrears),
-        [`Water Bill ${months[0]}`]: `रु ${water1.toLocaleString('en-IN')}`,
-        [`Water Bill ${months[1]}`]: `रु ${water2.toLocaleString('en-IN')}`,
-        [`Water Bill ${months[2]}`]: `रु ${water3.toLocaleString('en-IN')}`,
+        [`Water Bill ${waterMonthsDisplay[0] || months[0]}`]: `रु ${water1.toLocaleString('en-IN')}`,
+        [`Water Bill ${waterMonthsDisplay[1] || months[1]}`]: `रु ${water2.toLocaleString('en-IN')}`,
+        [`Water Bill ${waterMonthsDisplay[2] || months[2]}`]: `रु ${water3.toLocaleString('en-IN')}`,
+        'Water Bill Total': `रु ${waterTotal.toLocaleString('en-IN')}`,
         'Penalty': this.formatCurrency(penalty),
         'Balance': this.formatCurrency(totalBalance),
         // Previous maintenance columns
