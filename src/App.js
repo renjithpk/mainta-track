@@ -7,6 +7,7 @@ import './App.css';
 
 const App = () => {
   const [view, setView] = useState("result");
+  const [tab, setTab] = useState("mapping");
   const [maintenanceData, setMaintenanceData] = useState([]);
   const [bankTransactionsData, setBankTransactionsData] = useState([]);
   const [resultData, setResultData] = useState([]);
@@ -136,21 +137,46 @@ const App = () => {
 
   return (
     <div className="App">
-      <h1>Maintenance transaction tracker</h1>
-      <div className="controls-container">
-        <RadioButtons view={view} setView={setView} />
-        <CSVLoader 
-          onMaintenanceDataParsed={handleMaintenanceDataParsed} 
-          onBankTransactionsDataParsed={handleBankTransactionsDataParsed} 
-        />
+      <h1>Maintenance Transaction Tracker</h1>
+      <div className="tabs-container">
+        <button className={`tab-btn${tab === 'mapping' ? ' active' : ''}`} onClick={() => setTab('mapping')}>1. Bank Transaction Mapping</button>
+        <button className={`tab-btn${tab === 'maintenance' ? ' active' : ''}`} onClick={() => setTab('maintenance')}>2. Maintenance Calculation</button>
       </div>
-      
-      {error && <div className="error-message">{error}</div>} {/* Display error message if any */}
-      
-      <h1>{getViewTitle()}</h1>
-      {view === "maintenance" && <TableView columns={maintenanceColumns} data={maintenanceData} viewType="maintenance" />}
-      {view === "transaction" && <TableView columns={transactionColumns} data={bankTransactionsData} viewType="transaction" />}
-      {view === "result" && <TableView columns={resultColumns} data={resultData} viewType="result" />}
+      <div className="tab-content">
+        {tab === 'mapping' && (
+          <>
+            <div className="card controls-card">
+              <div className="section-header">Transaction Mapping</div>
+              <div className="controls-row">
+                <CSVLoader 
+                  onMaintenanceDataParsed={handleMaintenanceDataParsed} 
+                  onBankTransactionsDataParsed={handleBankTransactionsDataParsed} 
+                />
+              </div>
+              {error && <div className="error-message">{error}</div>}
+              <div className="description-text">
+                <strong>Instructions:</strong> Download the matching results CSV, manually adjust flat numbers if needed, then use the result along with previous quarter maintenance and water charges to generate the next maintenance sheet.
+              </div>
+            </div>
+            <div className="card results-card">
+              <div className="section-header">{getViewTitle()}</div>
+              <div className="controls-row">
+                <RadioButtons view={view} setView={setView} />
+              </div>
+              {view === "maintenance" && <TableView columns={maintenanceColumns} data={maintenanceData} viewType="maintenance" />}
+              {view === "transaction" && <TableView columns={transactionColumns} data={bankTransactionsData} viewType="transaction" />}
+              {view === "result" && <TableView columns={resultColumns} data={resultData} viewType="result" />}
+            </div>
+          </>
+        )}
+        {tab === 'maintenance' && (
+          <div className="maintenance-calc-placeholder">
+            <h2>Step 2: Maintenance Calculation (Q4)</h2>
+            <p className="info-text">Use the adjusted matching results, previous quarter maintenance, and water charges to generate the Q4 maintenance sheet. (Calculation tool coming soon!)</p>
+            <div className="placeholder-box">Maintenance calculation UI will appear here.</div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

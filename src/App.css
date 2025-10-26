@@ -1,8 +1,101 @@
+.card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  padding: 20px 28px;
+  margin-bottom: 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.controls-card {
+  margin-bottom: 16px;
+}
+.results-card {
+  margin-bottom: 32px;
+}
+.section-header {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #007bff;
+  text-align: left;
+}
+.controls-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+.description-text {
+  font-size: 15px;
+  color: #444;
+  margin: 8px 0 0 0;
+  text-align: left;
+}
 .App {
   text-align: center;
   background-color: #f0f0f0; /* Updated to a lighter background color */
   min-height: 100vh;
   padding: 20px;
+}
+
+.tabs-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  justify-content: center;
+}
+
+.tab-btn {
+  background: #fff;
+  border: 1px solid #007bff;
+  color: #007bff;
+  padding: 10px 24px;
+  border-radius: 6px 6px 0 0;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.tab-btn.active {
+  background: #007bff;
+  color: #fff;
+  border-bottom: 2px solid #007bff;
+}
+
+.tab-content {
+  background: #fff;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  padding: 24px;
+  margin-bottom: 32px;
+}
+
+.info-text {
+  color: #444;
+  font-size: 15px;
+  margin: 10px 0 20px 0;
+  text-align: left;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.maintenance-calc-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.placeholder-box {
+  background: #e9ecef;
+  border: 2px dashed #007bff;
+  border-radius: 8px;
+  padding: 40px 60px;
+  color: #888;
+  font-size: 18px;
+  margin-top: 24px;
+  min-width: 320px;
 }
 
 .App-header {
@@ -20,15 +113,18 @@
   color: #61dafb;
 }
 
+
 .controls-container {
   display: flex;
-  justify-content: left;
-  align-items: center;
-  margin: 20px 0;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+  margin: 8px 0 8px 0;
 }
 
-.controls-container > * {
-  margin: 0 10px;
+.compact-controls {
+  gap: 8px;
+  margin: 0 0 8px 0;
 }
 
 .error-message {
