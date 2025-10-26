@@ -148,9 +148,9 @@ const App = () => {
       {error && <div className="error-message">{error}</div>} {/* Display error message if any */}
       
       <h1>{getViewTitle()}</h1>
-      {view === "maintenance" && <TableView columns={maintenanceColumns} data={maintenanceData} />}
-      {view === "transaction" && <TableView columns={transactionColumns} data={bankTransactionsData} />}
-      {view === "result" && <TableView columns={resultColumns} data={resultData} />}
+      {view === "maintenance" && <TableView columns={maintenanceColumns} data={maintenanceData} viewType="maintenance" />}
+      {view === "transaction" && <TableView columns={transactionColumns} data={bankTransactionsData} viewType="transaction" />}
+      {view === "result" && <TableView columns={resultColumns} data={resultData} viewType="result" />}
     </div>
   );
 };
