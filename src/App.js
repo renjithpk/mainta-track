@@ -13,6 +13,7 @@ const App = () => {
   const [bankTransactionsData, setBankTransactionsData] = useState([]);
   const [waterChargesData, setWaterChargesData] = useState([]);
   const [resultData, setResultData] = useState([]);
+  const [manualMappings, setManualMappings] = useState([]); // in-memory manual mappings: { flatNo, transactionId, reason }
   const [error, setError] = useState(null); // State variable for error messages
   const [tabError, setTabError] = useState(null); // State for tab-specific errors
   const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
@@ -209,10 +210,10 @@ const App = () => {
     if (previousMaintenanceData.length === 0 || bankTransactionsData.length === 0) {
       return;
     }
-    const result = generateResultData(previousMaintenanceData, bankTransactionsData);
+    const result = generateResultData(previousMaintenanceData, bankTransactionsData, manualMappings);
     console.log("Generated resultData:", result);
     setResultData(result);
-  }, [previousMaintenanceData, bankTransactionsData]);
+  }, [previousMaintenanceData, bankTransactionsData, manualMappings]);
 
   // Compute available (unallocated) flats based on previous maintenance data
   const availableFlats = React.useMemo(() => {

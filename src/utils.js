@@ -1,12 +1,18 @@
 import levenshtein from 'fast-levenshtein';
 
-export const generateResultData = (previousMaintenanceData, bankTransactionsData) => {
+export const generateResultData = (previousMaintenanceData, bankTransactionsData, manualMappings = []) => {
   console.log("Starting generateResultData");
   let result = [];
 
   try {
     let remainingMaintenance = preprocessMaintenance(previousMaintenanceData);
     let remainingTransactions = preprocessTransactions(bankTransactionsData);
+
+    // Apply any manual mappings first (manualMappings is an array of { flatNo, transactionId, reason? })
+    if (Array.isArray(manualMappings) && manualMappings.length > 0) {
+      ({ result, remainingTransactions, remainingMaintenance } = byManualMapping(manualMappings, remainingMaintenance, remainingTransactions, result));
+      console.log("After byManualMapping, total matching result:", result.length);
+    }
 
     // Chain multiple assignTransaction calls
     ({ result, remainingTransactions, remainingMaintenance } = assignTransactionByFlatNum(remainingMaintenance, remainingTransactions, result));
@@ -216,6 +222,62 @@ function assignTransactionsByOnlyName(maintenanceList, transactionList, result) 
       maintenance.assigned = true;
       console.debug("Matching name and amount, adding flat: ", maintenance.flatno, " in result, with confidence: ", confidence);
       result.push(buildResult(maintenance, transaction, confidence));
+    }
+  });
+
+  return buildFilteredResponse(maintenanceList, transactionList, result);
+}
+
+/**
+ * Apply manual mappings supplied by the user.
+ * manualMappings: [{ flatNo, transactionId, reason? }]
+ */
+function byManualMapping(manualMappings, maintenanceList, transactionList, result) {
+  console.log('Applying manual mappings:', manualMappings.length);
+
+  // Build quick lookup maps for efficiency
+  const txById = new Map();
+  transactionList.forEach((tx, idx) => {
+    if (tx && tx.transactionid) txById.set(tx.transactionid.toString().trim(), { tx, idx });
+  });
+
+  const mByFlat = new Map();
+  maintenanceList.forEach((m, idx) => {
+    if (m && m.flatno) mByFlat.set(m.flatno.toString().trim(), { m, idx });
+  });
+
+  manualMappings.forEach((mapping) => {
+    try {
+      const flat = (mapping.flatNo || mapping.flatno || mapping.flat || '').toString().trim();
+      const txId = (mapping.transactionId || mapping.transactionid || mapping.txid || '').toString().trim();
+      const reason = mapping.reason || mapping.assignReason || '';
+
+      if (!flat && !txId) return; // nothing to do
+
+      const txEntry = txId ? txById.get(txId) : null;
+      const maintEntry = flat ? mByFlat.get(flat) : null;
+
+      if (txEntry && maintEntry) {
+        // both exist: mark assigned and push result
+        const tx = txEntry.tx;
+        const m = maintEntry.m;
+        tx.assigned = true;
+        m.assigned = true;
+        const conf = `manually assigned${reason ? `: ${reason}` : ''}`;
+        result.push(buildResult(m, tx, conf));
+      } else if (txEntry && !maintEntry) {
+        // transaction exists but maintenance row missing: emit transaction-only result so operator can attach later
+        const tx = txEntry.tx;
+        tx.assigned = true;
+        result.push(buildResult({ index: '', flatno: '', residentname: '', balance: '', assigned: false }, tx, `manually assigned (no maintenance): ${reason}`));
+      } else if (!txEntry && maintEntry) {
+        // maintenance exists but transaction missing: mark maintenance assigned and push an empty transaction
+        const m = maintEntry.m;
+        m.assigned = true;
+        result.push(buildResult(m, { transactionid: '', description: '', transactionamountinr: '' }, `manually assigned (no transaction): ${reason}`));
+      }
+    } catch (err) {
+      console.error('Error applying manual mapping', mapping, err);
     }
   });
 
