@@ -56,6 +56,44 @@ export class MaintenanceSheetGenerator {
     // Update penalty rate
     this.DAILY_PENALTY_RATE = dailyPenaltyRate;
 
+    // Extract month names dynamically from water charges data
+    // Water charges should have columns: flatno, month-july, month-aug, month-sept, total
+    let waterMonths = [];
+    if (waterChargesData && waterChargesData.length > 0) {
+      const headers = Object.keys(waterChargesData[0]);
+      console.log("Water charges headers (excluding index):", headers.slice(1));
+      
+      // Validate second column is flat number (first is index)
+      if (!headers[1] || !headers[1].toLowerCase().includes('flat')) {
+        throw new Error(`Second column must be flat number. Found: ${headers[1]}. All headers: ${headers.join(', ')}`);
+      }
+      
+      // Month columns should be at indices 2, 3, 4 (3rd, 4th, 5th columns)
+      const monthColumns = [headers[2], headers[3], headers[4]].filter(h => h);
+      console.log("Month columns extracted:", monthColumns);
+      console.log("Headers indices 2,3,4:", headers[2], headers[3], headers[4]);
+      
+      // Validate month prefix (case insensitive) - accept either "month..." or direct month names
+      const expectedMonths = ['july', 'aug', 'sept'];
+      const invalidColumns = monthColumns.filter(col => {
+        const lowerCol = col.toLowerCase();
+        return !lowerCol.startsWith('month') && !expectedMonths.includes(lowerCol);
+      });
+      if (invalidColumns.length > 0) {
+        throw new Error(`Water charges CSV columns 3-5 must have 'Month-' prefix or be month names (july, aug, sept). Invalid columns: ${invalidColumns.join(', ')}`);
+      }
+      
+      // Extract month names (remove 'month' prefix if present, case insensitive)
+      waterMonths = monthColumns.map(col => {
+        const lowerCol = col.toLowerCase();
+        return lowerCol.startsWith('month') ? lowerCol.replace(/^month/, '') : lowerCol;
+      });
+    } else {
+      waterMonths = ['july', 'aug', 'sept']; // fallback
+    }
+
+    console.log("Extracted water months:", waterMonths);
+
     const out = [];
 
     prevData.forEach((row) => {
@@ -80,9 +118,9 @@ export class MaintenanceSheetGenerator {
 
       const quarterly = monthlyMaintenance * 3;
 
-      const water1 = waterCharges ? this.parseCurrency(waterCharges[months[0]] || waterCharges['July'] || waterCharges['July']) : 0;
-      const water2 = waterCharges ? this.parseCurrency(waterCharges[months[1]] || waterCharges['Aug'] || waterCharges['Aug']) : 0;
-      const water3 = waterCharges ? this.parseCurrency(waterCharges[months[2]] || waterCharges['Sept'] || waterCharges['Sept']) : 0;
+      const water1 = waterCharges ? this.parseCurrency(waterCharges[waterMonths[0]]) : 0;
+      const water2 = waterCharges ? this.parseCurrency(waterCharges[waterMonths[1]]) : 0;
+      const water3 = waterCharges ? this.parseCurrency(waterCharges[waterMonths[2]]) : 0;
 
       const penalty = this.calculatePenalty({ flatNo, arrears: newArrears, prevBalance }, paymentRecord ? { transactionDate: paymentRecord.transactiondate, amount: this.parseCurrency(paymentRecord.transactionamountinr) } : null, dueDate);
 

@@ -30,7 +30,7 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
         {
           quarter: "Current", // Not hardcoded
           dueDate: dueDate,
-          months: ["July", "Aug", "Sept"]
+          dailyPenaltyRate: dailyPenaltyRate
         }
       );
       console.log("Generated result:", generated);
