@@ -4,6 +4,7 @@ import CSVLoader from "./CSVLoader";
 import RadioButtons from "./RadioButtons";
 import { generateResultData } from "./utils";
 import './App.css';
+import MaintenanceGeneratorUI from "./MaintenanceGeneratorUI";
 
 const App = () => {
   const [view, setView] = useState("result");
@@ -43,6 +44,76 @@ const App = () => {
     { id: "description", header: "Description", accessorKey: "description" },
     { id: "transactionid", header: "Transaction ID", accessorKey: "transactionid" },
   ];
+
+  // State to manage which result columns are visible in the Result view.
+  // Initialize with the full set to preserve current default behaviour (and keep 'confidence' present).
+  const [visibleResultColumns, setVisibleResultColumns] = useState(resultColumns);
+
+  // Optional columns the user can toggle for the Result table. These map to accessor keys
+  // used in the generated result rows. 'morecolumn' is included per request (treated as optional
+  // placeholder if not present in data).
+  const optionalResultColumns = [
+    { id: "morecolumn", header: "More Column", accessorKey: "morecolumn" },
+    { id: "lastMaintenance", header: "Last Maintenance Amount", accessorKey: "amount" },
+    { id: "amountPaid", header: "Amount Paid", accessorKey: "transactionamountinr" },
+    { id: "date", header: "Date", accessorKey: "transactiondate" },
+    { id: "transactionid_opt", header: "Transaction ID", accessorKey: "transactionid" },
+  ];
+
+  const toggleResultColumn = (col) => {
+    setVisibleResultColumns((prev) => {
+      const exists = prev.find((c) => c.accessorKey === col.accessorKey);
+      // Never remove the 'confidence' (status) column
+      if (exists) {
+        if (col.accessorKey === 'confidence') return prev;
+        return prev.filter((c) => c.accessorKey !== col.accessorKey);
+      }
+
+      // If column is not present, try to find a definition in the original resultColumns
+      const baseDef = resultColumns.find((c) => c.accessorKey === col.accessorKey) || { id: col.id, header: col.header, accessorKey: col.accessorKey };
+      return [...prev, baseDef];
+    });
+  };
+
+  // Load persisted visible columns from localStorage on mount (if available)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('visibleResultColumns');
+      if (!saved) return;
+      const keys = JSON.parse(saved);
+      if (!Array.isArray(keys)) return;
+      // Map saved accessor keys back to column definitions, prefer resultColumns, then optionalResultColumns
+      const cols = keys.map(k => {
+        return resultColumns.find(c => c.accessorKey === k) || optionalResultColumns.find(c => c.accessorKey === k) || { id: k, header: k, accessorKey: k };
+      }).filter(Boolean);
+      // Ensure 'confidence' is present
+      if (!cols.find(c => c.accessorKey === 'confidence')) {
+        const conf = resultColumns.find(c => c.accessorKey === 'confidence');
+        if (conf) cols.push(conf);
+      }
+      // Remove duplicates while preserving order
+      const seen = new Set();
+      const unique = cols.filter(c => {
+        if (seen.has(c.accessorKey)) return false;
+        seen.add(c.accessorKey);
+        return true;
+      });
+      if (unique.length > 0) setVisibleResultColumns(unique);
+    } catch (err) {
+      // ignore parse errors and continue with defaults
+      console.debug('Could not load visibleResultColumns from localStorage', err);
+    }
+  }, []);
+
+  // Persist visibleResultColumns accessor keys to localStorage whenever they change
+  useEffect(() => {
+    try {
+      const keys = visibleResultColumns.map(c => c.accessorKey);
+      localStorage.setItem('visibleResultColumns', JSON.stringify(keys));
+    } catch (err) {
+      console.debug('Could not persist visibleResultColumns to localStorage', err);
+    }
+  }, [visibleResultColumns]);
 
   const validateHeaders = (data, columns) => {
     const headers = Object.keys(data[0]);
@@ -165,15 +236,40 @@ const App = () => {
               </div>
               {view === "maintenance" && <TableView columns={maintenanceColumns} data={maintenanceData} viewType="maintenance" />}
               {view === "transaction" && <TableView columns={transactionColumns} data={bankTransactionsData} viewType="transaction" />}
-              {view === "result" && <TableView columns={resultColumns} data={resultData} viewType="result" />}
+              {view === "result" && (
+                <div style={{ width: '100%' }}>
+                  <div style={{ marginBottom: 12, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ fontWeight: 600 }}>Columns:</div>
+                    {optionalResultColumns.map((col) => {
+                      const checked = visibleResultColumns.some(c => c.accessorKey === col.accessorKey);
+                      const disabled = col.accessorKey === 'confidence'; // keep status/default column non-removable
+                      return (
+                        <label key={col.accessorKey} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={disabled}
+                            onChange={() => toggleResultColumn(col)}
+                          />
+                          <span>{col.header}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+
+                  <TableView columns={visibleResultColumns} data={resultData} viewType="result" />
+                </div>
+              )}
             </div>
           </>
         )}
         {tab === 'maintenance' && (
-          <div className="maintenance-calc-placeholder">
-            <h2>Step 2: Maintenance Calculation (Q4)</h2>
-            <p className="info-text">Use the adjusted matching results, previous quarter maintenance, and water charges to generate the Q4 maintenance sheet. (Calculation tool coming soon!)</p>
-            <div className="placeholder-box">Maintenance calculation UI will appear here.</div>
+          <div className="card generator-card">
+            <div className="section-header">Maintenance Sheet Generator</div>
+            <div className="description-text">
+              <strong>Instructions:</strong> Upload the previous maintenance sheet, payment mapping CSV, and water charges CSV. Click 'Generate Maintenance Sheet' to create the new sheet for the current period. You can use this tool for any quarter or period.
+            </div>
+            <MaintenanceGeneratorUI />
           </div>
         )}
       </div>
