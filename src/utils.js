@@ -1,12 +1,16 @@
 import levenshtein from 'fast-levenshtein';
 
-export const generateResultData = (previousMaintenanceData, bankTransactionsData) => {
-  console.log("Starting generateResultData");
+export const generateResultData = (previousMaintenanceData, bankTransactionsData, manualMappings = []) => {
   let result = [];
 
   try {
     let remainingMaintenance = preprocessMaintenance(previousMaintenanceData);
     let remainingTransactions = preprocessTransactions(bankTransactionsData);
+
+    // Apply manual mappings first (highest precedence)
+    if (Array.isArray(manualMappings) && manualMappings.length > 0) {
+      ({ result, remainingTransactions, remainingMaintenance } = byManualMapping(manualMappings, remainingMaintenance, remainingTransactions, result));
+    }
 
     // Chain multiple assignTransaction calls
     ({ result, remainingTransactions, remainingMaintenance } = assignTransactionByFlatNum(remainingMaintenance, remainingTransactions, result));
@@ -35,13 +39,13 @@ export const generateResultData = (previousMaintenanceData, bankTransactionsData
 };
 
 function preprocessMaintenance(previousMaintenanceData) {
-  console.log("Preprocessing maintenance data");
   return previousMaintenanceData.map((row) => {
     try {
       return {
         ...row,
         balance: row?.balance?.replace(/[^0-9.]/g, ""),
-        assigned: false,
+        // preserve any existing assigned flag
+        assigned: row?.assigned === true,
       };
     } catch (error) {
       console.error("Error in preprocessMaintenance for row:", row, error);
@@ -51,7 +55,6 @@ function preprocessMaintenance(previousMaintenanceData) {
 }
 
 function preprocessTransactions(bankTransactionsData) {
-  console.log("Preprocessing bank transactions data");
   return bankTransactionsData.map((row) => {
     try {
       // Clean up amount values - remove commas and quotes, convert to number
@@ -64,14 +67,66 @@ function preprocessTransactions(bankTransactionsData) {
       return {
         ...row,
         transactionamountinr: transactionAmount || 0,
-        assigned: false,
-        flat: extractFlatNumber(row.description),
+        assigned: row?.assigned === true,
+        flat: row?.flat || extractFlatNumber(row.description),
       };
     } catch (error) {
       console.error("Error in preprocessTransactions for row:", row, error);
       return { ...row, transactionamountinr: 0, assigned: false, flat: { flatNumber: "None", confidence: "N" } };
     }
   });
+}
+
+/**
+ * Apply manual mappings supplied by the user.
+ * manualMappings: [{ flatNo, transactionId, reason?, assignedBy?, assignedAt? }]
+ */
+function byManualMapping(manualMappings, maintenanceList, transactionList, result) {
+  // Build quick lookup maps
+  const txById = new Map();
+  transactionList.forEach((tx, idx) => {
+    if (tx && tx.transactionid) txById.set(tx.transactionid.toString().trim(), { tx, idx });
+  });
+
+  const mByFlat = new Map();
+  maintenanceList.forEach((m, idx) => {
+    if (m && m.flatno) mByFlat.set(m.flatno.toString().trim(), { m, idx });
+  });
+
+  manualMappings.forEach((mapping) => {
+    try {
+      const flat = (mapping.flatNo || mapping.flatno || mapping.flat || '').toString().trim();
+      const txId = (mapping.transactionId || mapping.transactionid || mapping.txid || '').toString().trim();
+      const reason = mapping.reason || mapping.assignReason || '';
+      const assignedBy = mapping.assignedBy || 'local';
+      const assignedAt = mapping.assignedAt || new Date().toISOString();
+
+      if (!flat && !txId) return;
+
+      const txEntry = txId ? txById.get(txId) : null;
+      const maintEntry = flat ? mByFlat.get(flat) : null;
+
+      if (txEntry && maintEntry) {
+        const tx = txEntry.tx;
+        const m = maintEntry.m;
+        tx.assigned = true;
+        m.assigned = true;
+        result.push(buildResultWithMeta(m, tx, `manually assigned${reason ? `: ${reason}` : ''}`, assignedBy, assignedAt, reason));
+      } else if (txEntry && !maintEntry) {
+        const tx = txEntry.tx;
+        tx.assigned = true;
+        result.push(buildResultWithMeta({ index: '', flatno: '', residentname: '', balance: '', assigned: false }, tx, `manually assigned (no maintenance): ${reason}`, assignedBy, assignedAt, reason));
+      } else if (!txEntry && maintEntry) {
+        const m = maintEntry.m;
+        m.assigned = true;
+        result.push(buildResultWithMeta(m, { transactionid: '', description: '', transactionamountinr: '' }, `manually assigned (no transaction): ${reason}`, assignedBy, assignedAt, reason));
+      }
+    } catch (err) {
+      console.error('Error applying manual mapping', mapping, err);
+    }
+  });
+
+  return buildFilteredResponse(maintenanceList, transactionList, result);
 }
 
 const assignTransactionByFlatNum = (maintenanceList, transactionList, result) => {
@@ -230,6 +285,33 @@ function buildResult(maintenance, transaction, confidence) {
     transactionamountinr: transaction.transactionamountinr,
     transactiondate: transaction.transactiondate,
     confidence,
+    // assignment metadata for UI and availability
+    status: (maintenance.assigned && transaction.assigned) ? 'confirmed' : 'unresolved',
+    assignedFlat: maintenance.flatno || '',
+    assignedTransactionId: transaction.transactionid || '',
+    assignedBy: '',
+    assignedAt: '',
+    assignReason: ''
+  };
+}
+
+function buildResultWithMeta(maintenance, transaction, confidence, assignedBy = '', assignedAt = '', assignReason = '') {
+  return {
+    index: maintenance.index,
+    flatNo: maintenance.flatno,
+    name: maintenance.residentname,
+    amount: maintenance.balance,
+    transactionid: transaction.transactionid,
+    description: transaction.description,
+    transactionamountinr: transaction.transactionamountinr,
+    transactiondate: transaction.transactiondate,
+    confidence,
+    status: (maintenance.assigned && transaction.assigned) ? 'confirmed' : 'unresolved',
+    assignedFlat: maintenance.flatno || '',
+    assignedTransactionId: transaction.transactionid || '',
+    assignedBy,
+    assignedAt,
+    assignReason
   };
 }
 

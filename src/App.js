@@ -42,6 +42,7 @@ const App = () => {
     { id: "flat", header: "Flat No", accessorKey: "flatNo" },
     { id: "name", header: "Resident Name", accessorKey: "name" },
     { id: "amount", header: "Amount", accessorKey: "amount" },
+    { id: "assign", header: "Assign Flat", accessorKey: "assignFlat" },
     { id: "transactionamountinr", header: "Transaction", accessorKey: "transactionamountinr" },
     { id: "transactiondate", header: "Transaction Date", accessorKey: "transactiondate" },
     { id: "confidence", header: "Confidence", accessorKey: "confidence" },
@@ -52,6 +53,7 @@ const App = () => {
   // State to manage which result columns are visible in the Result view.
   // Initialize with the full set to preserve current default behaviour (and keep 'confidence' present).
   const [visibleResultColumns, setVisibleResultColumns] = useState(resultColumns);
+  const [manualMappings, setManualMappings] = useState([]); // { flatNo, transactionId, reason?, assignedBy?, assignedAt? }
 
   // Optional columns the user can toggle for the Result table. These map to accessor keys
   // used in the generated result rows. 'morecolumn' is included per request (treated as optional
@@ -208,10 +210,35 @@ const App = () => {
     if (previousMaintenanceData.length === 0 || bankTransactionsData.length === 0) {
       return;
     }
-    const result = generateResultData(previousMaintenanceData, bankTransactionsData);
-    console.log("Generated resultData:", result);
+    const result = generateResultData(previousMaintenanceData, bankTransactionsData, manualMappings);
     setResultData(result);
-  }, [previousMaintenanceData, bankTransactionsData]);
+  }, [previousMaintenanceData, bankTransactionsData, manualMappings]);
+
+  const availableFlats = React.useMemo(() => {
+    const allFlats = previousMaintenanceData.map(r => (r.flatno || '').toString().trim()).filter(Boolean);
+    const confirmed = new Set(resultData.filter(r => r.status === 'confirmed').map(r => (r.assignedFlat || r.flatNo || '').toString().trim()));
+    return allFlats.filter(f => f && !confirmed.has(f));
+  }, [previousMaintenanceData, resultData]);
+
+  const handleAssignFlat = (rowIndex, selectedFlat) => {
+    if (!selectedFlat) return;
+    const row = resultData[rowIndex];
+    if (!row || !row.transactionid) return; // only allow assigning when a transaction exists
+
+    const txId = row.transactionid;
+    const now = new Date().toISOString();
+
+    setManualMappings((prev) => {
+      // remove any existing mappings for this transaction or for this flat (avoid duplicates)
+      const filtered = prev.filter(m => {
+        const mid = (m.transactionId || m.transactionid || '').toString();
+        const mflat = (m.flatNo || m.flatno || '').toString();
+        return mid !== (txId || '') && mflat !== (selectedFlat || '');
+      });
+      const newMapping = { flatNo: selectedFlat, transactionId: txId, reason: 'manual assign', assignedBy: 'local', assignedAt: now };
+      return [...filtered, newMapping];
+    });
+  };
 
   useEffect(() => {
     if (tab === 'mapping') {
@@ -312,7 +339,7 @@ const App = () => {
             <div className="section-header">{getViewTitle()}</div>
             {view === "maintenance" && <TableView columns={maintenanceColumns} data={previousMaintenanceData} viewType="maintenance" />}
             {view === "transaction" && <TableView columns={transactionColumns} data={bankTransactionsData} viewType="transaction" />}
-            {view === "result" && <TableView columns={visibleResultColumns} data={resultData} viewType="result" />}
+            {view === "result" && <TableView columns={visibleResultColumns} data={resultData} viewType="result" onAssignFlat={handleAssignFlat} availableFlats={availableFlats} />}
           </div>
         </>
       )}
