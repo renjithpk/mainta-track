@@ -105,7 +105,6 @@ export class MaintenanceSheetGenerator {
       const residentName = row['residentname'] || row['residentname'] || '';
       const monthlyMaintenance = this.parseCurrency(row['monthly'] || row['monthly'] || row['monthly ']);
       const prevBalance = this.parseCurrency(row['balance'] || row['balance']);
-      const prevArrears = this.parseCurrency(row['maintenancearrears'] || row['maintenancearrears']);
 
       const paymentRecord = paymentRecords.find(p => p.flatNo && String(p.flatNo).trim() === flatNo);
       const waterCharges = waterChargesData.find(w => (w['flatno'] === flatNo) || (w['flatno '] === flatNo) || (w['flatno'] && String(w['flatno']).trim() === flatNo));
@@ -143,8 +142,7 @@ export class MaintenanceSheetGenerator {
         'Penalty': this.formatCurrency(penalty),
         'Balance': this.formatCurrency(totalBalance),
         // Previous maintenance columns
-        'Previous Balance': this.formatCurrency(prevBalance),
-        'Previous Arrears': this.formatCurrency(prevArrears),
+        'Previous Maintenance': this.formatCurrency(prevBalance),
         // Payment columns
         'Transaction Amount': paymentRecord ? this.formatCurrency(this.parseCurrency(paymentRecord.transactionamountinr)) : '',
         'Transaction ID': paymentRecord ? paymentRecord.transactionid || '' : '',

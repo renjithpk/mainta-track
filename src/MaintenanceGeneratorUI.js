@@ -9,33 +9,31 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
   // Default columns (must match the keys generated in maintenanceGenerator.js)
   const defaultColumns = [
     'Flat No',
-    'Resident Name', 
+    'Resident Name',
     'Monthly',
     'Current Maintenance',
-    'Maintenance Arrears',
     'Water Bill July',
-    'Water Bill Aug', 
+    'Water Bill Aug',
     'Water Bill Sept',
     'Water Bill Total',
-    'Penalty',
-    'Balance',
-    // Previous maintenance columns
-    'Previous Balance',
-    'Previous Arrears',
-    // Payment columns
+    'Previous Maintenance',
     'Transaction Amount',
     'Transaction ID',
     'Transaction Date',
     'Description',
-    'Confidence'
+    'Confidence',
+    'Maintenance Arrears',
+    'Penalty',
+    'Balance'
   ];
   
   // Original columns that were selected by default
   const originalColumns = [
+    'Previous Maintenance',
+    'Transaction Amount',
     'Flat No',
     'Resident Name', 
     'Current Maintenance',
-    'Maintenance Arrears',
     'Water Bill Total',
     'Penalty',
     'Balance'
