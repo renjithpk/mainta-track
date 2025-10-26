@@ -19,7 +19,7 @@ const CSVLoader = ({ onMaintenanceDataParsed, onBankTransactionsDataParsed, onWa
     <div>
       <div style={{ display: "flex", gap: "20px", alignItems: "center", flexWrap: "wrap" }}>
         <div>
-          <h3>Maintenance Sheet</h3>
+          <h3>Previous Maintenance Sheet</h3>
           <FileUploader onDataParsed={handleMaintenanceUpload} />
         </div>
         <div>

@@ -217,13 +217,13 @@ const App = () => {
   useEffect(() => {
     if (tab === 'mapping') {
       if (maintenanceData.length === 0 || bankTransactionsData.length === 0) {
-        setTabError("Please upload Maintenance Sheet and Bank Transactions CSV files.");
+        setTabError("Please upload Previous Maintenance Sheet and Bank Transactions CSV files.");
       } else {
         setTabError(null);
       }
     } else if (tab === 'maintenance') {
       if (maintenanceData.length === 0 || waterChargesData.length === 0 || resultData.length === 0) {
-        setTabError("Please upload Maintenance Sheet, Water Charges CSV files, and ensure Bank Transaction Mapping results are available.");
+        setTabError("Please upload Previous Maintenance Sheet, Water Charges CSV files, and ensure Bank Transaction Mapping results are available.");
       } else {
         setTabError(null);
       }
@@ -278,7 +278,7 @@ const App = () => {
         </div>
         {error && <div className="error-message">{error}</div>}
         <div className="description-text">
-          <strong>Instructions:</strong> Upload all required CSV files: Maintenance Sheet (used for both mapping and calculation), Bank Transactions, and Water Charges for processing.
+          <strong>Instructions:</strong> Upload all required CSV files: Previous Maintenance Sheet (used for both mapping and calculation), Bank Transactions, and Water Charges for processing.
         </div>
       </div>
       <div className="tabs-container">
@@ -321,7 +321,7 @@ const App = () => {
         <div className="card generator-card">
           <div className="section-header">Maintenance Sheet Generator</div>
           <div className="description-text">
-            <strong>Instructions:</strong> Ensure all required CSV files are uploaded at the top. The Maintenance Sheet is used for both mapping and calculation. Click 'Generate Maintenance Sheet' to create the new sheet for the current period.
+            <strong>Instructions:</strong> Ensure all required CSV files are uploaded at the top. The Previous Maintenance Sheet is used for both mapping and calculation. Click 'Generate Maintenance Sheet' to create the new sheet for the current period.
           </div>
           {tabError && <div className="error-message">{tabError}</div>}
           <MaintenanceGeneratorUI payments={resultData} prevMaintenance={maintenanceData} waterCharges={waterChargesData} dueDate={dueDate} dailyPenaltyRate={dailyPenaltyRate} />
