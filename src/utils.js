@@ -111,15 +111,34 @@ function byManualMapping(manualMappings, maintenanceList, transactionList, resul
         const m = maintEntry.m;
         tx.assigned = true;
         m.assigned = true;
-        result.push(buildResultWithMeta(m, tx, `manually assigned${reason ? `: ${reason}` : ''}`, assignedBy, assignedAt, reason));
+        // Build a concise manual confidence string similar to auto-matching confidence
+        try {
+          const diff = (m && m.balance !== undefined && tx && tx.transactionamountinr !== undefined) ? (Number(m.balance) - Number(tx.transactionamountinr)) : null;
+          const diffPart = diff !== null ? `Diff:${diff}` : '';
+          const flatConf = tx && tx.flat && tx.flat.confidence ? `Flat(${tx.flat.confidence})` : '';
+          const names = matchingNameInTransaction(tx.description, m.residentname);
+          const namePart = (names && names.length) ? `name (${names.join(", ")}) match` : '';
+          const metaParts = [];
+          if (diffPart) metaParts.push(diffPart);
+          if (flatConf && namePart) metaParts.push(`${flatConf} and ${namePart}`);
+          else if (flatConf) metaParts.push(flatConf);
+          else if (namePart) metaParts.push(namePart);
+          const confidence = ['manual', ...metaParts].filter(Boolean).join(', ');
+          result.push(buildResultWithMeta(m, tx, confidence, assignedBy, assignedAt, reason));
+        } catch (e) {
+          // Fallback to a simple manual label
+          result.push(buildResultWithMeta(m, tx, 'manual', assignedBy, assignedAt, reason));
+        }
       } else if (txEntry && !maintEntry) {
         const tx = txEntry.tx;
         tx.assigned = true;
-        result.push(buildResultWithMeta({ index: '', flatno: '', residentname: '', balance: '', assigned: false }, tx, `manually assigned (no maintenance): ${reason}`, assignedBy, assignedAt, reason));
+        // No maintenance row present — label as manual with a note
+        result.push(buildResultWithMeta({ index: '', flatno: '', residentname: '', balance: '', assigned: false }, tx, `manual (no maintenance)${reason ? `: ${reason}` : ''}`, assignedBy, assignedAt, reason));
       } else if (!txEntry && maintEntry) {
         const m = maintEntry.m;
         m.assigned = true;
-        result.push(buildResultWithMeta(m, { transactionid: '', description: '', transactionamountinr: '' }, `manually assigned (no transaction): ${reason}`, assignedBy, assignedAt, reason));
+        // No transaction present — label as manual with a note
+        result.push(buildResultWithMeta(m, { transactionid: '', description: '', transactionamountinr: '' }, `manual (no transaction)${reason ? `: ${reason}` : ''}`, assignedBy, assignedAt, reason));
       }
     } catch (err) {
       console.error('Error applying manual mapping', mapping, err);

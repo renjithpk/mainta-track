@@ -3,25 +3,39 @@ import './TableView.css'; // Import the CSS file
 import { exportToCSV, generateExportFilename } from './exportUtils';
 import AssignSelect from './AssignSelect';
 
-const TableView = ({ columns, data, viewType, onAssignFlat, availableFlats = [] }) => {
+const TableView = ({ columns, data, viewType, onAssignFlat, availableFlats = [], onExportManualMappings }) => {
   const handleExport = () => {
     const filename = generateExportFilename(viewType);
     exportToCSV(data, columns, filename);
   };
 
+  const handleExportManual = () => {
+    if (typeof onExportManualMappings === 'function') onExportManualMappings();
+  };
+
   return (
     <div className="table-view-container">
-      <div className="table-header">
+        <div className="table-header">
         <div className="table-info">
           <span className="record-count">Records: {data.length}</span>
         </div>
-        <button 
-          className="export-button" 
-          onClick={handleExport}
-          disabled={!data || data.length === 0}
-        >
-          📥 Export to CSV
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button 
+            className="export-button" 
+            onClick={handleExport}
+            disabled={!data || data.length === 0}
+          >
+            📥 Export to CSV
+          </button>
+          <button
+            className="export-button"
+            onClick={handleExportManual}
+            disabled={typeof onExportManualMappings !== 'function'}
+            title="Export only manual mapping entries"
+          >
+            🗂️ Export Manual Mappings
+          </button>
+        </div>
       </div>
       <table className="table-view">
         <thead>

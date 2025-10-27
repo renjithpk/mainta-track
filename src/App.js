@@ -3,6 +3,7 @@ import TableView from "./TableView";
 import CSVLoader from "./CSVLoader";
 import RadioButtons from "./RadioButtons";
 import { generateResultData } from "./utils";
+import { exportToCSV } from "./exportUtils";
 import './App.css';
 import MaintenanceGeneratorUI from "./MaintenanceGeneratorUI";
 
@@ -371,6 +372,38 @@ const App = () => {
     });
   };
 
+  const exportManualMappings = () => {
+    if (!manualMappings || manualMappings.length === 0) {
+      alert('No manual mappings to export');
+      return;
+    }
+    // Build export rows by enriching manualMappings with confidence from resultData
+    const exportRows = manualMappings.map(m => {
+      const txId = (m.transactionId || m.transactionid || '').toString();
+      const matched = resultData.find(r => (r.transactionid || r.assignedTransactionId || '').toString() === txId);
+      return {
+        flatNo: m.flatNo,
+        transactionId: m.transactionId,
+        residentName: matched ? (matched.name || matched.residentname || '') : '',
+        transactionDescription: matched ? (matched.description || '') : '',
+        confidence: matched ? matched.confidence : '',
+      };
+    });
+
+    // Define columns for manual mapping export: include resident name and transaction description
+    const columns = [
+      { id: 'flatNo', header: 'Flat No', accessorKey: 'flatNo' },
+      { id: 'transactionId', header: 'Transaction ID', accessorKey: 'transactionId' },
+      { id: 'residentName', header: 'Resident Name', accessorKey: 'residentName' },
+      { id: 'transactionDescription', header: 'Transaction Description', accessorKey: 'transactionDescription' },
+      { id: 'confidence', header: 'Confidence', accessorKey: 'confidence' },
+    ];
+
+    const date = new Date().toISOString().split('T')[0];
+    const filename = `manual_mappings_${date}`;
+    exportToCSV(exportRows, columns, filename);
+  };
+
   useEffect(() => {
     if (tab === 'mapping') {
       if (previousMaintenanceData.length === 0 || bankTransactionsData.length === 0) {
@@ -471,7 +504,7 @@ const App = () => {
             <div className="section-header">{getViewTitle()}</div>
             {view === "maintenance" && <TableView columns={maintenanceColumns} data={previousMaintenanceData} viewType="maintenance" />}
             {view === "transaction" && <TableView columns={transactionColumns} data={bankTransactionsData} viewType="transaction" />}
-            {view === "result" && <TableView columns={orderedVisibleResultColumns} data={resultData} viewType="result" onAssignFlat={handleAssignFlat} availableFlats={availableFlats} />}
+            {view === "result" && <TableView columns={orderedVisibleResultColumns} data={resultData} viewType="result" onAssignFlat={handleAssignFlat} availableFlats={availableFlats} onExportManualMappings={exportManualMappings} />}
           </div>
         </>
       )}
