@@ -1,6 +1,7 @@
 import React from 'react';
 import './TableView.css'; // Import the CSS file
 import { exportToCSV, generateExportFilename } from './exportUtils';
+import AssignSelect from './AssignSelect';
 
 const TableView = ({ columns, data, viewType, onAssignFlat, availableFlats = [] }) => {
   const handleExport = () => {
@@ -50,23 +51,25 @@ const TableView = ({ columns, data, viewType, onAssignFlat, availableFlats = [] 
                     return <td key={column.id}>{row.assignedFlat || row.flatNo}</td>;
                   }
 
-                  // Editable select for available flats (when a transaction exists or manual assignment)
+                  // Use custom AssignSelect so we can control popup width while keeping the visible button compact
                   const current = row.assignedFlat || row.flatNo || '';
-                  // include current value in options even if not in availableFlats
-                  const options = current ? [current, ...availableFlats.filter(f => f !== current)] : availableFlats;
+                  // normalize availableFlats to objects { flatNo, label }
+                  const normalize = (item) => (typeof item === 'string' ? { flatNo: item, label: item } : (item || { flatNo: '', label: '' }));
+                  const normalized = (availableFlats || []).map(normalize);
+
+                  // ensure current is present first
+                  const finalOptionsMap = new Map();
+                  if (current) finalOptionsMap.set(current, normalize(current));
+                  normalized.forEach(o => { if (o.flatNo) finalOptionsMap.set(o.flatNo, o); });
+                  const finalOptions = Array.from(finalOptionsMap.values());
 
                   return (
-                    <td key={column.id}>
-                      <select
+                    <td key={column.id} style={{ position: 'relative' }}>
+                      <AssignSelect
                         value={current}
-                        onChange={(e) => onAssignFlat && onAssignFlat(rowIndex, e.target.value)}
-                        disabled={!onAssignFlat || (!availableFlats || availableFlats.length === 0) && !current}
-                      >
-                        <option value="">-- select flat --</option>
-                        {options.map((f, i) => (
-                          <option key={i} value={f}>{f}</option>
-                        ))}
-                      </select>
+                        options={finalOptions}
+                        onChange={(flatNo) => onAssignFlat && onAssignFlat(rowIndex, flatNo)}
+                      />
                     </td>
                   );
                 }

@@ -70,3 +70,16 @@
 .table-view tr:hover {
   background-color: #ddd;
 }
+
+/* Assign select styling: keep the visible control compact, but avoid wrapping inside options
+   so some browsers will expand the dropdown list to show full labels. */
+.assign-select {
+  width: auto;
+  min-width: 80px;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.assign-select option {
+  white-space: nowrap;
+}

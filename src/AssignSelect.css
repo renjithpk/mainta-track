@@ -1,0 +1,61 @@
+.assign-select-root {
+  position: relative;
+  display: inline-block;
+}
+
+.assign-select-button {
+  min-width: 80px;
+  max-width: 240px; /* keep visible button compact */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.assign-select-caret {
+  margin-left: 6px;
+  font-size: 11px;
+  color: #666;
+}
+
+.assign-select-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 1000;
+  min-width: 320px; /* allow wide popup */
+  max-width: 740px;
+  background: #fff;
+  border: 1px solid #ddd;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  padding: 6px 0;
+  list-style: none;
+  margin: 0;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.assign-select-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.assign-select-item:hover {
+  background: #f2f6fb;
+}
+
+.assign-select-item.selected {
+  background: #e6f0ff;
+}
+
+.assign-select-item-label {
+  font-size: 13px;
+}

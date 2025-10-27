@@ -276,14 +276,22 @@ function assignTransactionsByOnlyName(maintenanceList, transactionList, result) 
 
 function buildResult(maintenance, transaction, confidence) {
   return {
+    // propagate maintenance fields first so original CSV columns are available as top-level fields
+    ...maintenance,
+    // normalized/display fields (override any maintenance keys if necessary)
     index: maintenance.index,
     flatNo: maintenance.flatno,
     name: maintenance.residentname,
+    // amount is the maintenance 'balance' (with penalty)
     amount: maintenance.balance,
     transactionid: transaction.transactionid,
     description: transaction.description,
     transactionamountinr: transaction.transactionamountinr,
     transactiondate: transaction.transactiondate,
+    // propagate maintenance-side fields so result rows can show them when requested
+    penalty: maintenance.penalty || '',
+    lastmaintenancewithoutpenalty: maintenance.lastmaintenancewithoutpenalty || '',
+    prevarrears: maintenance.prevarrears || '',
     confidence,
     // assignment metadata for UI and availability
     status: (maintenance.assigned && transaction.assigned) ? 'confirmed' : 'unresolved',
@@ -297,6 +305,8 @@ function buildResult(maintenance, transaction, confidence) {
 
 function buildResultWithMeta(maintenance, transaction, confidence, assignedBy = '', assignedAt = '', assignReason = '') {
   return {
+    // propagate maintenance fields so original CSV columns are available
+    ...maintenance,
     index: maintenance.index,
     flatNo: maintenance.flatno,
     name: maintenance.residentname,
@@ -305,6 +315,10 @@ function buildResultWithMeta(maintenance, transaction, confidence, assignedBy = 
     description: transaction.description,
     transactionamountinr: transaction.transactionamountinr,
     transactiondate: transaction.transactiondate,
+    // propagate maintenance-side fields
+    penalty: maintenance.penalty || '',
+    lastmaintenancewithoutpenalty: maintenance.lastmaintenancewithoutpenalty || '',
+  prevarrears: maintenance.prevarrears || '',
     confidence,
     status: (maintenance.assigned && transaction.assigned) ? 'confirmed' : 'unresolved',
     assignedFlat: maintenance.flatno || '',
