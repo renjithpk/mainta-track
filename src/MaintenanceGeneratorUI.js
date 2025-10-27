@@ -23,6 +23,7 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
     'Description',
     'Confidence',
     'Maintenance Arrears',
+    'Arrears',
     'Penalty',
     'AMC',
     'Balance'

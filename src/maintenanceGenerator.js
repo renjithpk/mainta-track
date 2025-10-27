@@ -113,12 +113,15 @@ export class MaintenanceSheetGenerator {
       const waterCharges = waterChargesData.find(w => (w['flatno'] === flatNo) || (w['flatno '] === flatNo) || (w['flatno'] && String(w['flatno']).trim() === flatNo));
 
       let newArrears = 0;
+      const paidAmount = paymentRecord ? this.parseCurrency(paymentRecord.transactionamountinr) : 0;
       if (paymentRecord) {
-        const paidAmount = this.parseCurrency(paymentRecord.transactionamountinr);
         newArrears = Math.max(0, prevBalance - paidAmount);
       } else {
         newArrears = prevBalance;
       }
+
+      // Arrears as requested: previous maintenance (balance) - transaction amount (signed)
+      const arrearsSigned = prevBalance - paidAmount;
 
       const quarterly = monthlyMaintenance * 3;
 
@@ -140,7 +143,8 @@ export class MaintenanceSheetGenerator {
         'Resident Name': residentName,
         'Monthly': this.formatCurrency(monthlyMaintenance),
         [`${quarter} Maintenance`]: this.formatCurrency(quarterly),
-        'Maintenance Arrears': this.formatCurrency(newArrears),
+  'Maintenance Arrears': this.formatCurrency(newArrears),
+  'Arrears': this.formatCurrency(arrearsSigned),
         [`Water Bill ${waterMonthsDisplay[0] || months[0]}`]: `रु ${water1.toLocaleString('en-IN')}`,
         [`Water Bill ${waterMonthsDisplay[1] || months[1]}`]: `रु ${water2.toLocaleString('en-IN')}`,
         [`Water Bill ${waterMonthsDisplay[2] || months[2]}`]: `रु ${water3.toLocaleString('en-IN')}`,
