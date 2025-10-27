@@ -334,20 +334,17 @@ const App = () => {
     const confirmed = new Set(resultData.filter(r => r.status === 'confirmed').map(r => (r.assignedFlat || r.flatNo || '').toString().trim()));
     const freeFlats = allFlats.filter(f => f && !confirmed.has(f));
 
-    // For each free flat, attempt to find the maintenance row and build a helpful label
+    // For each free flat, attempt to find the maintenance row and build a concise label
+    // Format requested: "<flat number> <name> <balance> (<balance - penalty>)"
     const flatsWithDetails = freeFlats.map(flatNo => {
       const row = previousMaintenanceData.find(r => (r.flatno || '').toString().trim() === flatNo) || {};
 
-      // Prepare a concise label including resident name and maintenance fields if present
-      const parts = [];
-      if (row.residentname) parts.push(row.residentname);
-      // prefer the no-penalty value if present, otherwise show balance
-      if (row.lastmaintenancewithoutpenalty) parts.push(`Last(no penalty): ${row.lastmaintenancewithoutpenalty}`);
-      else if (row.balance) parts.push(`Last: ${row.balance}`);
-      if (row.penalty) parts.push(`Penalty: ${row.penalty}`);
-      if (row.prevarrears) parts.push(`Prev Arrears: ${row.prevarrears}`);
+      const namePart = row.residentname ? ` ${row.residentname}` : '';
+      const balancePart = row.balance ? ` ${row.balance}` : '';
+      const lastPart = row.lastmaintenancewithoutpenalty ? ` (${row.lastmaintenancewithoutpenalty})` : '';
 
-      const label = parts.length > 0 ? `${flatNo} — ${parts.join(' — ')}` : flatNo;
+      // Build label with minimal separators as requested
+      const label = `${flatNo}${namePart}${balancePart}${lastPart}`.trim();
       return { flatNo, label };
     });
 
