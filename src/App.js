@@ -18,6 +18,8 @@ const App = () => {
   const [tabError, setTabError] = useState(null); // State for tab-specific errors
   const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
   const [dailyPenaltyRate, setDailyPenaltyRate] = useState(20);
+  const [amcEnabled, setAmcEnabled] = useState(false);
+  const [amcValue, setAmcValue] = useState(3000);
 
   const maintenanceColumns = [
     { id: "index", header: "Index", accessorKey: "index" },
@@ -465,6 +467,25 @@ const App = () => {
               style={{ marginLeft: '5px', width: '80px' }}
             />
           </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={amcEnabled}
+              onChange={(e) => setAmcEnabled(e.target.checked)}
+            />
+            <span>Include AMC</span>
+          </label>
+          <label>
+            AMC (₹):
+            <input
+              type="number"
+              value={amcValue}
+              onChange={(e) => setAmcValue(Number(e.target.value))}
+              min="0"
+              style={{ marginLeft: '5px', width: '100px' }}
+              disabled={!amcEnabled}
+            />
+          </label>
         </div>
         {error && <div className="error-message">{error}</div>}
         <div className="description-text">
@@ -515,7 +536,15 @@ const App = () => {
             <strong>Instructions:</strong> Ensure all required CSV files are uploaded at the top. The Previous Maintenance Sheet is used for both mapping and calculation. Click 'Generate Maintenance Sheet' to create the new sheet for the current period.
           </div>
           {tabError && <div className="error-message">{tabError}</div>}
-          <MaintenanceGeneratorUI payments={resultData} prevMaintenance={previousMaintenanceData} waterCharges={waterChargesData} dueDate={dueDate} dailyPenaltyRate={dailyPenaltyRate} />
+          <MaintenanceGeneratorUI
+            payments={resultData}
+            prevMaintenance={previousMaintenanceData}
+            waterCharges={waterChargesData}
+            dueDate={dueDate}
+            dailyPenaltyRate={dailyPenaltyRate}
+            amcEnabled={amcEnabled}
+            amcValue={amcValue}
+          />
         </div>
       )}
     </div>

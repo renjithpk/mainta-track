@@ -51,9 +51,11 @@ export class MaintenanceSheetGenerator {
       months = ['Month1', 'Month2', 'Month3'],
       dailyPenaltyRate = 20,
       selectedColumns = null,
-      columnsOrder = null
+      columnsOrder = null,
+      amcEnabled = false,
+      amcValue = 3000
     } = options;
-  console.log("Options:", { quarter, dueDate, months, dailyPenaltyRate, selectedColumns });
+  console.log("Options:", { quarter, dueDate, months, dailyPenaltyRate, selectedColumns, amcEnabled, amcValue });
 
     // Update penalty rate
     this.DAILY_PENALTY_RATE = dailyPenaltyRate;
@@ -124,9 +126,12 @@ export class MaintenanceSheetGenerator {
       const water2 = waterCharges ? this.parseCurrency(waterCharges[waterMonths[1]]) : 0;
       const water3 = waterCharges ? this.parseCurrency(waterCharges[waterMonths[2]]) : 0;
 
-      const penalty = this.calculatePenalty({ flatNo, arrears: newArrears, prevBalance }, paymentRecord ? { transactionDate: paymentRecord.transactiondate, amount: this.parseCurrency(paymentRecord.transactionamountinr) } : null, dueDate);
 
-      const totalBalance = quarterly + newArrears + water1 + water2 + water3 + penalty;
+  const penalty = this.calculatePenalty({ flatNo, arrears: newArrears, prevBalance }, paymentRecord ? { transactionDate: paymentRecord.transactiondate, amount: this.parseCurrency(paymentRecord.transactionamountinr) } : null, dueDate);
+
+  const amcVal = amcEnabled ? this.parseCurrency(amcValue) : 0;
+
+  const totalBalance = quarterly + newArrears + water1 + water2 + water3 + penalty + amcVal;
 
       const waterTotal = water1 + water2 + water3;
 
@@ -139,9 +144,10 @@ export class MaintenanceSheetGenerator {
         [`Water Bill ${waterMonthsDisplay[0] || months[0]}`]: `रु ${water1.toLocaleString('en-IN')}`,
         [`Water Bill ${waterMonthsDisplay[1] || months[1]}`]: `रु ${water2.toLocaleString('en-IN')}`,
         [`Water Bill ${waterMonthsDisplay[2] || months[2]}`]: `रु ${water3.toLocaleString('en-IN')}`,
-        'Water Bill Total': `रु ${waterTotal.toLocaleString('en-IN')}`,
-        'Penalty': this.formatCurrency(penalty),
-        'Balance': this.formatCurrency(totalBalance),
+  'Water Bill Total': `रु ${waterTotal.toLocaleString('en-IN')}`,
+  'Penalty': this.formatCurrency(penalty),
+  'AMC': amcEnabled ? this.formatCurrency(amcVal) : '',
+  'Balance': this.formatCurrency(totalBalance),
         // Previous maintenance columns
         'Previous Maintenance': this.formatCurrency(prevBalance),
         // Payment columns

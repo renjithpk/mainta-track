@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import MaintenanceSheetGenerator from "./maintenanceGenerator";
 import TableView from './TableView';
 
-const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDate, dailyPenaltyRate }) => {
+const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDate, dailyPenaltyRate, amcEnabled, amcValue }) => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   
@@ -24,6 +24,7 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
     'Confidence',
     'Maintenance Arrears',
     'Penalty',
+    'AMC',
     'Balance'
   ];
 
@@ -80,7 +81,9 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
           dueDate: dueDate,
           dailyPenaltyRate: dailyPenaltyRate,
           selectedColumns: columnSelected,
-          columnsOrder: columnsOrder
+          columnsOrder: columnsOrder,
+          amcEnabled: !!amcEnabled,
+          amcValue: amcValue || 0
         }
       );
       console.log("Generated result:", generated);
