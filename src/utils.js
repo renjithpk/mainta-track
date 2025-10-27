@@ -79,7 +79,7 @@ function preprocessTransactions(bankTransactionsData) {
 
 /**
  * Apply manual mappings supplied by the user.
- * manualMappings: [{ flatNo, transactionId, reason?, assignedBy?, assignedAt? }]
+ * manualMappings: [{ flatNo, transactionId, reason? }]
  */
 function byManualMapping(manualMappings, maintenanceList, transactionList, result) {
   // Build quick lookup maps
@@ -97,48 +97,46 @@ function byManualMapping(manualMappings, maintenanceList, transactionList, resul
     try {
       const flat = (mapping.flatNo || mapping.flatno || mapping.flat || '').toString().trim();
       const txId = (mapping.transactionId || mapping.transactionid || mapping.txid || '').toString().trim();
-      const reason = mapping.reason || mapping.assignReason || '';
-      const assignedBy = mapping.assignedBy || 'local';
-      const assignedAt = mapping.assignedAt || new Date().toISOString();
+  const reason = mapping.reason || mapping.assignReason || '';
 
       if (!flat && !txId) return;
 
       const txEntry = txId ? txById.get(txId) : null;
       const maintEntry = flat ? mByFlat.get(flat) : null;
 
-      if (txEntry && maintEntry) {
+        if (txEntry && maintEntry) {
         const tx = txEntry.tx;
         const m = maintEntry.m;
         tx.assigned = true;
         m.assigned = true;
         // Build a concise manual confidence string similar to auto-matching confidence
-        try {
-          const diff = (m && m.balance !== undefined && tx && tx.transactionamountinr !== undefined) ? (Number(m.balance) - Number(tx.transactionamountinr)) : null;
-          const diffPart = diff !== null ? `Diff:${diff}` : '';
-          const flatConf = tx && tx.flat && tx.flat.confidence ? `Flat(${tx.flat.confidence})` : '';
-          const names = matchingNameInTransaction(tx.description, m.residentname);
-          const namePart = (names && names.length) ? `name (${names.join(", ")}) match` : '';
-          const metaParts = [];
-          if (diffPart) metaParts.push(diffPart);
-          if (flatConf && namePart) metaParts.push(`${flatConf} and ${namePart}`);
-          else if (flatConf) metaParts.push(flatConf);
-          else if (namePart) metaParts.push(namePart);
-          const confidence = ['manual', ...metaParts].filter(Boolean).join(', ');
-          result.push(buildResultWithMeta(m, tx, confidence, assignedBy, assignedAt, reason));
-        } catch (e) {
-          // Fallback to a simple manual label
-          result.push(buildResultWithMeta(m, tx, 'manual', assignedBy, assignedAt, reason));
-        }
+          try {
+            const diff = (m && m.balance !== undefined && tx && tx.transactionamountinr !== undefined) ? (Number(m.balance) - Number(tx.transactionamountinr)) : null;
+            const diffPart = diff !== null ? `Diff:${diff}` : '';
+            const flatConf = tx && tx.flat && tx.flat.confidence ? `Flat(${tx.flat.confidence})` : '';
+            const names = matchingNameInTransaction(tx.description, m.residentname);
+            const namePart = (names && names.length) ? `name (${names.join(", ")}) match` : '';
+            const metaParts = [];
+            if (diffPart) metaParts.push(diffPart);
+            if (flatConf && namePart) metaParts.push(`${flatConf} and ${namePart}`);
+            else if (flatConf) metaParts.push(flatConf);
+            else if (namePart) metaParts.push(namePart);
+            const confidence = ['manual', ...metaParts].filter(Boolean).join(', ');
+            result.push(buildResultWithMeta(m, tx, confidence, reason));
+          } catch (e) {
+            // Fallback to a simple manual label
+            result.push(buildResultWithMeta(m, tx, 'manual', reason));
+          }
       } else if (txEntry && !maintEntry) {
         const tx = txEntry.tx;
         tx.assigned = true;
         // No maintenance row present — label as manual with a note
-        result.push(buildResultWithMeta({ index: '', flatno: '', residentname: '', balance: '', assigned: false }, tx, `manual (no maintenance)${reason ? `: ${reason}` : ''}`, assignedBy, assignedAt, reason));
+          result.push(buildResultWithMeta({ index: '', flatno: '', residentname: '', balance: '', assigned: false }, tx, `manual (no maintenance)${reason ? `: ${reason}` : ''}`, reason));
       } else if (!txEntry && maintEntry) {
         const m = maintEntry.m;
         m.assigned = true;
         // No transaction present — label as manual with a note
-        result.push(buildResultWithMeta(m, { transactionid: '', description: '', transactionamountinr: '' }, `manual (no transaction)${reason ? `: ${reason}` : ''}`, assignedBy, assignedAt, reason));
+        result.push(buildResultWithMeta(m, { transactionid: '', description: '', transactionamountinr: '' }, `manual (no transaction)${reason ? `: ${reason}` : ''}`, reason));
       }
     } catch (err) {
       console.error('Error applying manual mapping', mapping, err);
@@ -317,12 +315,11 @@ function buildResult(maintenance, transaction, confidence) {
     assignedFlat: maintenance.flatno || '',
     assignedTransactionId: transaction.transactionid || '',
     assignedBy: '',
-    assignedAt: '',
     assignReason: ''
   };
 }
 
-function buildResultWithMeta(maintenance, transaction, confidence, assignedBy = '', assignedAt = '', assignReason = '') {
+function buildResultWithMeta(maintenance, transaction, confidence, assignReason = '') {
   return {
     // propagate maintenance fields so original CSV columns are available
     ...maintenance,
@@ -342,8 +339,6 @@ function buildResultWithMeta(maintenance, transaction, confidence, assignedBy = 
     status: (maintenance.assigned && transaction.assigned) ? 'confirmed' : 'unresolved',
     assignedFlat: maintenance.flatno || '',
     assignedTransactionId: transaction.transactionid || '',
-    assignedBy,
-    assignedAt,
     assignReason
   };
 }

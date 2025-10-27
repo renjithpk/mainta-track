@@ -52,7 +52,7 @@ const TableView = ({ columns, data, viewType, onAssignFlat, availableFlats = [],
                 // Special rendering for the assignment column
                 if (column.accessorKey === 'assignFlat') {
                   const hasTransaction = row.transactionid && row.transactionid !== '';
-                  const isManual = row.assignedBy && row.assignedBy === 'local';
+                  const isManual = row.assignReason && row.assignReason.toLowerCase().includes('manual');
                   const isConfirmedAuto = row.status === 'confirmed' && !isManual;
 
                   // If there is no transaction and it's not a manual-assigned row, show text

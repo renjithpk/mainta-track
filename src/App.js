@@ -97,7 +97,7 @@ const App = () => {
   // State to manage which result columns are visible in the Result view.
   // Initialize from our ordered default so the UI shows the requested columns by default.
   const [visibleResultColumns, setVisibleResultColumns] = useState(defaultVisibleResultColumns);
-  const [manualMappings, setManualMappings] = useState([]); // { flatNo, transactionId, reason?, assignedBy?, assignedAt? }
+  const [manualMappings, setManualMappings] = useState([]); // { flatNo, transactionId, reason? }
   // Use a static order derived from `resultColumns` — this is intentionally not stateful so order stays fixed.
   const resultColumnsOrder = React.useMemo(() => resultColumns.map(c => c.accessorKey), [resultColumns]);
 
@@ -369,7 +369,7 @@ const App = () => {
         const mflat = (m.flatNo || m.flatno || '').toString();
         return mid !== (txId || '') && mflat !== (selectedFlat || '');
       });
-      const newMapping = { flatNo: selectedFlat, transactionId: txId, reason: 'manual assign', assignedBy: 'local', assignedAt: now };
+      const newMapping = { flatNo: selectedFlat, transactionId: txId, reason: 'manual assign' };
       return [...filtered, newMapping];
     });
   };
