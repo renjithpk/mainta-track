@@ -71,27 +71,23 @@ class MaintenanceSheetGenerator {
       const residentName = q3Row['Resident Name'];
       const monthlyMaintenance = this.parseCurrency(q3Row['Monthly']);
       const q3Balance = this.parseCurrency(q3Row['Balance']);
-      const q3Arrears = this.parseCurrency(q3Row['Maintenance Arrears']);
 
       // Find payment record for this flat
-      const paymentRecord = paymentRecords.find(p => 
+      const paymentRecord = paymentRecords.find(p =>
         p['Flat No'] && p['Flat No'].trim() === flatNo
       );
 
       // Find water charges for Q4
-      const waterCharges = waterChargesQ4.find(w => 
+      const waterCharges = waterChargesQ4.find(w =>
         w['Flat No '] && w['Flat No '].trim() === flatNo
       );
 
-      // Calculate new maintenance arrears
-      let newArrears = 0;
-      if (paymentRecord) {
-        const paidAmount = this.parseCurrency(paymentRecord['Amount']);
-        newArrears = Math.max(0, q3Balance - paidAmount);
-      } else {
-        // No payment made, entire Q3 balance becomes arrears
-        newArrears = q3Balance;
-      }
+      // Calculate arrears as signed difference: previous quarter balance - amount paid
+      // This can be negative (overpayment) or positive (outstanding)
+      const paidAmount = paymentRecord ? this.parseCurrency(paymentRecord['Amount']) : 0;
+      const arrearsSigned = q3Balance - paidAmount;
+      // Keep non-negative version available if needed elsewhere
+      const newArrears = Math.max(0, arrearsSigned);
 
       // Q4 maintenance (quarterly = monthly × 3)
       const q4Maintenance = monthlyMaintenance * 3;
@@ -103,10 +99,10 @@ class MaintenanceSheetGenerator {
 
       // Calculate penalty
       const penalty = this.calculatePenalty(
-        { 
-          flatNo, 
+        {
+          flatNo,
           arrears: newArrears,
-          q3Balance 
+          q3Balance
         },
         paymentRecord ? {
           transactionDate: paymentRecord['Transaction Date'],
@@ -116,7 +112,8 @@ class MaintenanceSheetGenerator {
       );
 
       // Calculate total balance
-      const totalBalance = q4Maintenance + newArrears + waterBillJuly + waterBillAug + waterBillSept + penalty;
+      // Use signed arrears so overpayments subtract from the current maintenance due
+      const totalBalance = q4Maintenance + arrearsSigned + waterBillJuly + waterBillAug + waterBillSept + penalty;
 
       // Create Q4 row
       const q4Row = {
@@ -124,7 +121,8 @@ class MaintenanceSheetGenerator {
         'Resident Name': residentName,
         'Monthly': this.formatCurrency(monthlyMaintenance),
         [`${quarter} Maintenance`]: this.formatCurrency(q4Maintenance),
-        'Maintenance Arrears': this.formatCurrency(newArrears),
+        // Display signed maintenance arrears (prev balance - paid amount)
+        'Maintenance Arrears': this.formatCurrency(arrearsSigned),
         [`Water Bill ${months[0]}`]: waterCharges ? `रु ${waterBillJuly.toLocaleString('en-IN')}` : 'रु 0',
         [`Water Bill ${months[1]}`]: waterCharges ? `रु ${waterBillAug.toLocaleString('en-IN')}` : 'रु 0',
         [`Water Bill ${months[2]}`]: waterCharges ? `रु ${waterBillSept.toLocaleString('en-IN')}` : 'रु 0',
@@ -152,12 +150,12 @@ class MaintenanceSheetGenerator {
   // Generate summary report
   generateSummary(q4Data, paymentRecords) {
     console.log('\n=== Q4 MAINTENANCE SUMMARY ===');
-    
+
     const totalFlats = q4Data.length;
     const totalMaintenance = q4Data.reduce((sum, row) => sum + this.parseCurrency(row['Balance']), 0);
     const totalPenalties = q4Data.reduce((sum, row) => sum + this.parseCurrency(row['Penalty']), 0);
     const totalArrears = q4Data.reduce((sum, row) => sum + this.parseCurrency(row['Maintenance Arrears']), 0);
-    
+
     const flatsWithPenalty = q4Data.filter(row => this.parseCurrency(row['Penalty']) > 0).length;
     const flatsWithArrears = q4Data.filter(row => this.parseCurrency(row['Maintenance Arrears']) > 0).length;
 

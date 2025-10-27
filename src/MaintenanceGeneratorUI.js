@@ -5,7 +5,7 @@ import TableView from './TableView';
 const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDate, dailyPenaltyRate, amcEnabled, amcValue }) => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
-  
+
   // Column order (all available columns in the intended display order)
   const columnsOrder = [
     'Flat No',
@@ -23,7 +23,6 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
     'Description',
     'Confidence',
     'Maintenance Arrears',
-    'Arrears',
     'Penalty',
     'AMC',
     'Balance'
@@ -72,7 +71,7 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
     try {
       // Generate maintenance sheet
       const generator = new MaintenanceSheetGenerator({ dailyPenaltyRate });
-  console.log("Generator created with dailyPenaltyRate:", dailyPenaltyRate);
+      console.log("Generator created with dailyPenaltyRate:", dailyPenaltyRate);
       const generated = generator.generateMaintenanceSheet(
         prevMaintenance,
         payments,

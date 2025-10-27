@@ -63,7 +63,7 @@ function preprocessTransactions(bankTransactionsData) {
         // Remove commas, quotes and convert to number
         transactionAmount = parseFloat(transactionAmount.replace(/[",]/g, ''));
       }
-      
+
       return {
         ...row,
         transactionamountinr: transactionAmount || 0,
@@ -97,41 +97,41 @@ function byManualMapping(manualMappings, maintenanceList, transactionList, resul
     try {
       const flat = (mapping.flatNo || mapping.flatno || mapping.flat || '').toString().trim();
       const txId = (mapping.transactionId || mapping.transactionid || mapping.txid || '').toString().trim();
-  const reason = mapping.reason || mapping.assignReason || '';
+      const reason = mapping.reason || mapping.assignReason || '';
 
       if (!flat && !txId) return;
 
       const txEntry = txId ? txById.get(txId) : null;
       const maintEntry = flat ? mByFlat.get(flat) : null;
 
-        if (txEntry && maintEntry) {
+      if (txEntry && maintEntry) {
         const tx = txEntry.tx;
         const m = maintEntry.m;
         tx.assigned = true;
         m.assigned = true;
         // Build a concise manual confidence string similar to auto-matching confidence
-          try {
-            const diff = (m && m.balance !== undefined && tx && tx.transactionamountinr !== undefined) ? (Number(m.balance) - Number(tx.transactionamountinr)) : null;
-            const diffPart = diff !== null ? `Diff:${diff}` : '';
-            const flatConf = tx && tx.flat && tx.flat.confidence ? `Flat(${tx.flat.confidence})` : '';
-            const names = matchingNameInTransaction(tx.description, m.residentname);
-            const namePart = (names && names.length) ? `name (${names.join(", ")}) match` : '';
-            const metaParts = [];
-            if (diffPart) metaParts.push(diffPart);
-            if (flatConf && namePart) metaParts.push(`${flatConf} and ${namePart}`);
-            else if (flatConf) metaParts.push(flatConf);
-            else if (namePart) metaParts.push(namePart);
-            const confidence = ['manual', ...metaParts].filter(Boolean).join(', ');
-            result.push(buildResultWithMeta(m, tx, confidence, reason));
-          } catch (e) {
-            // Fallback to a simple manual label
-            result.push(buildResultWithMeta(m, tx, 'manual', reason));
-          }
+        try {
+          const diff = (m && m.balance !== undefined && tx && tx.transactionamountinr !== undefined) ? (Number(m.balance) - Number(tx.transactionamountinr)) : null;
+          const diffPart = diff !== null ? `Diff:${diff}` : '';
+          const flatConf = tx && tx.flat && tx.flat.confidence ? `Flat(${tx.flat.confidence})` : '';
+          const names = matchingNameInTransaction(tx.description, m.residentname);
+          const namePart = (names && names.length) ? `name (${names.join(", ")}) match` : '';
+          const metaParts = [];
+          if (diffPart) metaParts.push(diffPart);
+          if (flatConf && namePart) metaParts.push(`${flatConf} and ${namePart}`);
+          else if (flatConf) metaParts.push(flatConf);
+          else if (namePart) metaParts.push(namePart);
+          const confidence = ['manual', ...metaParts].filter(Boolean).join(', ');
+          result.push(buildResultWithMeta(m, tx, confidence, reason));
+        } catch (e) {
+          // Fallback to a simple manual label
+          result.push(buildResultWithMeta(m, tx, 'manual', reason));
+        }
       } else if (txEntry && !maintEntry) {
         const tx = txEntry.tx;
         tx.assigned = true;
         // No maintenance row present — label as manual with a note
-          result.push(buildResultWithMeta({ index: '', flatno: '', residentname: '', balance: '', assigned: false }, tx, `manual (no maintenance)${reason ? `: ${reason}` : ''}`, reason));
+        result.push(buildResultWithMeta({ index: '', flatno: '', residentname: '', balance: '', assigned: false }, tx, `manual (no maintenance)${reason ? `: ${reason}` : ''}`, reason));
       } else if (!txEntry && maintEntry) {
         const m = maintEntry.m;
         m.assigned = true;
@@ -165,7 +165,7 @@ const assignTransactionByFlatNum = (maintenanceList, transactionList, result) =>
     if (transaction) {
       const difference = maintenance.balance - transaction.transactionamountinr;
       if (Math.abs(difference) <= 1) {
-        const confidence = `Flat (${transaction.flat.confidence}) and amount match ${difference != 0? `, diff:${difference}`: ""}`;
+        const confidence = `Flat (${transaction.flat.confidence}) and amount match ${difference != 0 ? `, diff:${difference}` : ""}`;
         transaction.assigned = true;
         maintenance.assigned = true;
         result.push(buildResult(maintenance, transaction, confidence));
@@ -196,7 +196,7 @@ const assignTransactionsByNameSimilarity = (maintenanceList, transactionList, re
         return;
       }
       let difference = maintenance.balance - transaction.transactionamountinr;
-      const confidence = `amount and name (${names.join(", ")}) match ${difference != 0? `, diff:${difference}`: ""}`;
+      const confidence = `amount and name (${names.join(", ")}) match ${difference != 0 ? `, diff:${difference}` : ""}`;
       transaction.assigned = true;
       maintenance.assigned = true;
       console.debug("Matching name and amount, adding flat: ", maintenance.flatno, " in result, with confidence: ", confidence);
@@ -234,7 +234,7 @@ function assignTransactionsByNameAndFlat(maintenanceList, transactionList, resul
   maintenanceList.forEach((maintenance) => {
     if (!maintenance.flatno) {
       return;
-    } 
+    }
     const flatNumber = maintenance.flatno.replace(/[^0-9]/g, "");
     console.debug("checking for flat number: ", flatNumber, " in transaction list");
     const transaction = transactionList.find((transaction) => {
@@ -334,7 +334,7 @@ function buildResultWithMeta(maintenance, transaction, confidence, assignReason 
     // propagate maintenance-side fields
     penalty: maintenance.penalty || '',
     lastmaintenancewithoutpenalty: maintenance.lastmaintenancewithoutpenalty || '',
-  prevarrears: maintenance.prevarrears || '',
+    prevarrears: maintenance.prevarrears || '',
     confidence,
     status: (maintenance.assigned && transaction.assigned) ? 'confirmed' : 'unresolved',
     assignedFlat: maintenance.flatno || '',

@@ -15,13 +15,13 @@ const TableView = ({ columns, data, viewType, onAssignFlat, availableFlats = [],
 
   return (
     <div className="table-view-container">
-        <div className="table-header">
+      <div className="table-header">
         <div className="table-info">
           <span className="record-count">Records: {data.length}</span>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button 
-            className="export-button" 
+          <button
+            className="export-button"
             onClick={handleExport}
             disabled={!data || data.length === 0}
           >
