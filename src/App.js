@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import TableView from "./TableView";
 import CSVLoader from "./CSVLoader";
 import RadioButtons from "./RadioButtons";
-import { generateResultData } from "./utils";
+import { generateResultData, waterBillingMonths } from "./utils";
 import { exportToCSV } from "./exportUtils";
 import './App.css';
 import MaintenanceGeneratorUI from "./MaintenanceGeneratorUI";
@@ -411,6 +411,34 @@ const App = () => {
 
   const handleWaterChargesDataParsed = (data) => {
     try {
+      if (!data || data.length === 0) {
+        setError('Water Charges CSV appears empty');
+        return;
+      }
+
+      const headers = Object.keys(data[0] || {});
+      // Determine expected months from selectedQuarter (e.g. 'Q1-26')
+      const qMatch = (selectedQuarter || '').toString().toUpperCase().match(/Q([1-4])/);
+      const qKey = qMatch ? `q${qMatch[1]}` : null;
+      const expectedMonths = qKey && waterBillingMonths[qKey] ? waterBillingMonths[qKey] : null;
+
+      if (expectedMonths) {
+        // Normalize headers to alphanumeric lower-case (FileUploader already does this, but be safe)
+        const normHeaders = headers.map(h => (h || '').toString().replace(/[^a-z0-9]/gi, '').toLowerCase());
+
+        const missing = expectedMonths.filter((m) => {
+          // Accept headers that start with optional 'month' prefix followed by the 3-letter month
+          const re = new RegExp(`^(month)?${m}`);
+          return !normHeaders.some(h => re.test(h));
+        });
+
+        if (missing.length > 0) {
+          const headerList = headers.join(', ');
+          setError(`Water Charges CSV missing expected month columns for: ${missing.join(', ')}. Detected headers: ${headerList}. Expected month columns (start with): ${expectedMonths.map(m => `month${m}`).join(', ')}.`);
+          return;
+        }
+      }
+
       const indexedData = data.map((row, index) => ({
         index: index + 1, // Adding a 1-based index
         ...row,
