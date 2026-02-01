@@ -1,33 +1,11 @@
 import React, { useState } from "react";
 import MaintenanceSheetGenerator from "./maintenanceGenerator";
 import TableView from './TableView';
+import { waterBillingMonths } from './utils';
 
 const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDate, dailyPenaltyRate, amcEnabled, amcValue, quarter }) => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
-
-  // Column order (all available columns in the intended display order)
-  const columnsOrder = [
-    'Flat No',
-    'Resident Name',
-    'Monthly',
-    'Current Maintenance',
-    'Water Bill July',
-    'Water Bill Aug',
-    'Water Bill Sept',
-    'Water Bill Total',
-    'Previous Maintenance',
-    'Transaction Amount',
-    'Transaction ID',
-    'Transaction Date',
-    'Description',
-    'Confidence',
-    'Maintenance Arrears',
-    'Penalty',
-    'AMC',
-    'Balance'
-  ];
-
   // Default selections shown when user clicks "Default"
   const defaultSelections = [
     'Previous Maintenance',
@@ -42,6 +20,49 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
 
   // Currently selected columns (drives generator and table order)
   const [columnSelected, setColumnSelected] = useState(defaultSelections);
+
+  // Column order (all available columns in the intended display order)
+  const getQuarterMonths = (quarterLabel) => {
+    const qMatch = (quarterLabel || '').toString().toUpperCase().match(/Q([1-4])/);
+    const qKey = qMatch ? `q${qMatch[1]}` : null;
+    return qKey && waterBillingMonths[qKey] ? waterBillingMonths[qKey] : null;
+  };
+
+  const capitalize = (s) => s ? (s.charAt(0).toUpperCase() + s.slice(1)) : s;
+
+  const months = getQuarterMonths(quarter);
+  if (!months) {
+    // show immediate error in the component UI when quarter cannot be parsed
+    // use local error state so it doesn't override generator errors
+    // We prefer to show a clear message rather than silently defaulting months
+    return (
+      <div className="generator-ui">
+        <div className="error-message">Invalid quarter selected — please choose a valid Quarter (e.g. Q1-26)</div>
+      </div>
+    );
+  }
+  const columnsOrder = [
+    'Flat No',
+    'Resident Name',
+    'Monthly',
+    'Current Maintenance',
+    `Water Bill ${capitalize(months[0])}`,
+    `Water Bill ${capitalize(months[1])}`,
+    `Water Bill ${capitalize(months[2])}`,
+    'Water Bill Total',
+    'Previous Maintenance',
+    'Transaction Amount',
+    'Transaction ID',
+    'Transaction Date',
+    'Description',
+    'Confidence',
+    'Maintenance Arrears',
+    'Penalty',
+    'AMC',
+    'Balance'
+  ];
+
+  // Default selections shown when user clicks "Default" (already declared above)
 
   const handleResetToDefault = () => {
     setColumnSelected(defaultSelections);

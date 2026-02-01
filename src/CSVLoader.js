@@ -35,10 +35,21 @@ const CSVLoader = ({ onPreviousMaintenanceDataParsed, onBankTransactionsDataPars
         </div>
         <div>
           {(() => {
-            // Determine quarter key like 'q1' from selectedQuarter e.g. 'Q1-26'
             const qMatch = (selectedQuarter || '').toString().toUpperCase().match(/Q([1-4])/);
             const qKey = qMatch ? `q${qMatch[1]}` : null;
-            const months = qKey && waterBillingMonths[qKey] ? waterBillingMonths[qKey] : ['jul', 'aug', 'sep'];
+            const months = qKey && waterBillingMonths[qKey] ? waterBillingMonths[qKey] : null;
+            if (!months) {
+              const msg = 'Invalid quarter selected — please choose a valid Quarter in settings';
+              return (
+                <>
+                  <h3 title={msg}>Water Charges</h3>
+                  <FileUploader
+                    onDataParsed={handleWaterChargesUpload}
+                    tooltip={msg}
+                  />
+                </>
+              );
+            }
             const monthFields = months.map(m => `month${m}`).join(',');
             const tooltip = `flatno,${monthFields},total`;
             return (

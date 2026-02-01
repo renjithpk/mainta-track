@@ -57,38 +57,49 @@ const App = () => {
     { id: "transactionremarks", header: "Transaction Remarks", accessorKey: "transactionremarks" },
   ];
 
+  const getQuarterMonths = (quarterLabel) => {
+    const qMatch = (quarterLabel || '').toString().toUpperCase().match(/Q([1-4])/);
+    const qKey = qMatch ? `q${qMatch[1]}` : null;
+    return qKey && waterBillingMonths[qKey] ? waterBillingMonths[qKey] : null;
+  };
+
+  const capitalize = (s) => s ? (s.charAt(0).toUpperCase() + s.slice(1)) : s;
+
   // Order: maintenance-sheet fields first (use normalized accessor keys),
   // then bank transaction fields, then generated fields (confidence / assignment metadata).
-  const resultColumns = [
-    { id: "index", header: "Index", accessorKey: "index" },
-    { id: "flat", header: "Flat No", accessorKey: "flatNo" },
-    { id: "name", header: "Resident Name", accessorKey: "name" },
-    // Maintenance sheet original fields (normalized accessor keys from uploaded CSV)
-    { id: "monthly", header: "Monthly", accessorKey: "monthly" },
-    { id: "q3maintenance", header: "Q3-25 Maintenance", accessorKey: "q325maintenance" },
-    { id: "maintenancearrears", header: "Maintenance Arrears", accessorKey: "maintenancearrears" },
-    { id: "waterbillapr", header: "Water Bill Apr", accessorKey: "waterbillapr" },
-    { id: "waterbillmay", header: "Water Bill May", accessorKey: "waterbillmay" },
-    { id: "waterbilljune", header: "Water Bill June", accessorKey: "waterbilljune" },
-    { id: "penalty", header: "Penalty", accessorKey: "penalty" },
+  const resultColumns = React.useMemo(() => {
+    const months = getQuarterMonths(selectedQuarter);
+    const waterCols = months.map(m => ({ id: `waterbill${m}`, header: `Water Bill ${capitalize(m)}`, accessorKey: `waterbill${m}` }));
 
-    // Place balance after penalty (make balance the final maintenance field)
-    { id: "balance", header: "balance", accessorKey: "balance" },
+    return [
+      { id: "index", header: "Index", accessorKey: "index" },
+      { id: "flat", header: "Flat No", accessorKey: "flatNo" },
+      { id: "name", header: "Resident Name", accessorKey: "name" },
+      // Maintenance sheet original fields (normalized accessor keys from uploaded CSV)
+      { id: "monthly", header: "Monthly", accessorKey: "monthly" },
+      { id: "q3maintenance", header: "Q3-25 Maintenance", accessorKey: "q325maintenance" },
+      { id: "maintenancearrears", header: "Maintenance Arrears", accessorKey: "maintenancearrears" },
+      ...waterCols,
+      { id: "penalty", header: "Penalty", accessorKey: "penalty" },
 
-    // Bank transaction fields
-    { id: "transactionamountinr", header: "Transaction Amount (INR)", accessorKey: "transactionamountinr" },
-    { id: "transactiondate", header: "Transaction Date", accessorKey: "transactiondate" },
-    { id: "description", header: "Description", accessorKey: "description" },
-    { id: "transactionid", header: "Transaction ID", accessorKey: "transactionid" },
+      // Place balance after penalty (make balance the final maintenance field)
+      { id: "balance", header: "balance", accessorKey: "balance" },
 
-    // Generated / derived fields (computed by the app)
-    { id: "lastMaintenanceNoPenalty", header: "Last Maintenance (no Penalty)", accessorKey: "lastmaintenancewithoutpenalty" },
-    { id: "assign", header: "Assign Flat", accessorKey: "assignFlat" },
-    { id: "confidence", header: "Confidence", accessorKey: "confidence" },
-    { id: "status", header: "Status", accessorKey: "status" },
-    { id: "assignedFlat", header: "Assigned Flat", accessorKey: "assignedFlat" },
-    { id: "assignedTransactionId", header: "Assigned Transaction ID", accessorKey: "assignedTransactionId" },
-  ];
+      // Bank transaction fields
+      { id: "transactionamountinr", header: "Transaction Amount (INR)", accessorKey: "transactionamountinr" },
+      { id: "transactiondate", header: "Transaction Date", accessorKey: "transactiondate" },
+      { id: "description", header: "Description", accessorKey: "description" },
+      { id: "transactionid", header: "Transaction ID", accessorKey: "transactionid" },
+
+      // Generated / derived fields (computed by the app)
+      { id: "lastMaintenanceNoPenalty", header: "Last Maintenance (no Penalty)", accessorKey: "lastmaintenancewithoutpenalty" },
+      { id: "assign", header: "Assign Flat", accessorKey: "assignFlat" },
+      { id: "confidence", header: "Confidence", accessorKey: "confidence" },
+      { id: "status", header: "Status", accessorKey: "status" },
+      { id: "assignedFlat", header: "Assigned Flat", accessorKey: "assignedFlat" },
+      { id: "assignedTransactionId", header: "Assigned Transaction ID", accessorKey: "assignedTransactionId" },
+    ];
+  }, [selectedQuarter]);
 
   // Default visible columns (ordered): Flat No, Resident Name, Balance,
   // Transaction amount, Transaction Date, Description, Assign Flat, Confidence
@@ -439,10 +450,36 @@ const App = () => {
         }
       }
 
-      const indexedData = data.map((row, index) => ({
-        index: index + 1, // Adding a 1-based index
-        ...row,
-      }));
+      // Build list of month accessor keys from data or expectedMonths
+      const dataKeys = Object.keys(data[0] || {});
+      const normKeys = dataKeys.map(k => ({ raw: k, norm: (k || '').toString().replace(/[^a-z0-9]/gi, '').toLowerCase() }));
+      let monthAccessors = [];
+      if (expectedMonths) {
+        monthAccessors = expectedMonths.map((m) => {
+          const re = new RegExp(`^(month)?${m}`);
+          const found = normKeys.find(k => re.test(k.norm));
+          return found ? found.raw : `month${m}`;
+        });
+      } else {
+        // fallback: any keys starting with month or 3-letter month
+        monthAccessors = normKeys.filter(k => /^(month)?(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/.test(k.norm)).map(k => k.raw);
+      }
+
+      const parseNum = (v) => {
+        if (v === undefined || v === null || v === '') return 0;
+        if (typeof v === 'number') return v;
+        const n = parseFloat(String(v).replace(/[^0-9.-]/g, ''));
+        return isNaN(n) ? 0 : n;
+      };
+
+      const indexedData = data.map((row, index) => {
+        const total = monthAccessors.reduce((sum, key) => sum + parseNum(row[key]), 0);
+        return {
+          index: index + 1, // Adding a 1-based index
+          ...row,
+          total,
+        };
+      });
       setWaterChargesData(indexedData);
       setError(null); // Clear any previous errors
     } catch (err) {
@@ -564,22 +601,44 @@ const App = () => {
     }
   };
 
-  const buildWaterColumns = React.useCallback(() => {
-    if (!waterChargesData || waterChargesData.length === 0) return [];
-    const keys = Object.keys(waterChargesData[0] || {});
-    // skip any index column named 'index'
-    const filtered = keys.filter(k => k.toLowerCase() !== 'index');
-    return filtered.map((k, i) => ({ id: `w_${i}_${k}`, header: k, accessorKey: k }));
-  }, [waterChargesData]);
+  const defaultWaterColumns = React.useMemo(() => {
+    const months = getQuarterMonths(selectedQuarter);
+    return [
+      { id: 'w_index', header: 'Index', accessorKey: 'index' },
+      { id: 'w_flatno', header: 'Flat No', accessorKey: 'flatno' },
+      { id: 'w_month1', header: `Month ${capitalize(months[0])}`, accessorKey: `month${months[0]}` },
+      { id: 'w_month2', header: `Month ${capitalize(months[1])}`, accessorKey: `month${months[1]}` },
+      { id: 'w_month3', header: `Month ${capitalize(months[2])}`, accessorKey: `month${months[2]}` },
+      { id: 'w_total', header: 'Total', accessorKey: 'total' },
+    ];
+  }, [selectedQuarter]);
 
-  const defaultWaterColumns = [
-    { id: 'w_index', header: 'Index', accessorKey: 'index' },
-    { id: 'w_flatno', header: 'Flat No', accessorKey: 'flatno' },
-    { id: 'w_month1', header: 'Month 1', accessorKey: 'monthjuly' },
-    { id: 'w_month2', header: 'Month 2', accessorKey: 'monthaug' },
-    { id: 'w_month3', header: 'Month 3', accessorKey: 'monthsept' },
-    { id: 'w_total', header: 'Total', accessorKey: 'total' },
-  ];
+  const buildWaterColumns = React.useCallback(() => {
+    // Build accessor keys from actual data keys, but keep header labels stable
+    if (!waterChargesData || waterChargesData.length === 0) return defaultWaterColumns;
+    const keys = Object.keys(waterChargesData[0] || {});
+    const normKeys = keys.map(k => ({ raw: k, norm: (k || '').toString().replace(/[^a-z0-9]/gi, '').toLowerCase() }));
+    const months = getQuarterMonths(selectedQuarter);
+
+    const monthCols = months.map((m, i) => {
+      const re = new RegExp(`^(month)?${m}`);
+      const found = normKeys.find(k => re.test(k.norm));
+      const accessor = found ? found.raw : `month${m}`;
+      return { id: `w_month${i + 1}`, header: `Month ${capitalize(m)}`, accessorKey: accessor };
+    });
+
+    // index and flatno keys may be present in data; prefer data keys if available
+    const idxKey = keys.find(k => k.toLowerCase() === 'index') || 'index';
+    const flatKey = keys.find(k => k.toLowerCase() === 'flatno') || 'flatno';
+    const totalKey = keys.find(k => k.toLowerCase() === 'total') || 'total';
+
+    return [
+      { id: 'w_index', header: 'Index', accessorKey: idxKey },
+      { id: 'w_flatno', header: 'Flat No', accessorKey: flatKey },
+      ...monthCols,
+      { id: 'w_total', header: 'Total', accessorKey: totalKey },
+    ];
+  }, [waterChargesData, selectedQuarter, defaultWaterColumns]);
 
   const waterChargesColumns = (waterChargesData && waterChargesData.length > 0) ? buildWaterColumns() : defaultWaterColumns;
 
