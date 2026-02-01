@@ -22,14 +22,34 @@ export class MaintenanceSheetGenerator {
 
   // Calculate penalty based on payment status and arrears
   calculatePenalty(flat, paymentRecord, dueDate) {
-    // Only apply time-based penalty for late payments
-    if (!paymentRecord) {
-      return 0; // No penalty if no payment record
+    const dueDateObj = new Date(dueDate);
+
+    // Normalize paymentRecord: treat zero-amount or missing/invalid date as no payment
+    if (paymentRecord) {
+      const amount = (typeof paymentRecord.amount === 'number') ? paymentRecord.amount : (parseFloat(paymentRecord.amount) || 0);
+      const paymentDateValid = paymentRecord.transactionDate && !isNaN(new Date(paymentRecord.transactionDate).getTime());
+      if (amount <= 0 || !paymentDateValid) {
+        paymentRecord = null;
+      }
     }
 
-    // Payment made - calculate time-based penalty
+    // If there is no payment record, charge penalty from due date to today
+    if (!paymentRecord) {
+      // Only apply penalty if there are arrears
+      const arrears = flat && typeof flat.arrears === 'number' ? flat.arrears : 0;
+      if (arrears <= 0) return 0;
+
+      const today = new Date();
+      const daysLate = Math.ceil((today - dueDateObj) / (1000 * 60 * 60 * 24));
+      if (daysLate > this.GRACE_PERIOD_DAYS) {
+        const penaltyDays = daysLate - this.GRACE_PERIOD_DAYS;
+        return penaltyDays * this.DAILY_PENALTY_RATE;
+      }
+      return 0;
+    }
+
+    // Payment made - calculate time-based penalty up to payment date
     const paymentDate = new Date(paymentRecord.transactionDate);
-    const dueDateObj = new Date(dueDate);
     const daysLate = Math.ceil((paymentDate - dueDateObj) / (1000 * 60 * 60 * 24));
 
     if (daysLate > this.GRACE_PERIOD_DAYS) {
