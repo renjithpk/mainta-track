@@ -19,16 +19,25 @@ const CSVLoader = ({ onPreviousMaintenanceDataParsed, onBankTransactionsDataPars
     <div>
       <div style={{ display: "flex", gap: "20px", alignItems: "center", flexWrap: "wrap" }}>
         <div>
-          <h3>Previous Maintenance Sheet</h3>
-          <FileUploader onDataParsed={handleMaintenanceUpload} />
+          <h3 title="flatno,balance">Previous Maintenance Sheet</h3>
+          <FileUploader
+            onDataParsed={handleMaintenanceUpload}
+            tooltip={"flatno,balance,penalty,lastmaintenancewithoutpenalty,maintenancearrears"}
+          />
         </div>
         <div>
-          <h3>Bank Transactions</h3>
-          <FileUploader onDataParsed={handleBankTransactionsUpload} />
+          <h3 title="depositamtinr,transactionamountinr,crdr">Bank Transactions</h3>
+          <FileUploader
+            onDataParsed={handleBankTransactionsUpload}
+            tooltip={"depositamtinr,transactionamountinr,crdr,transactiondate,transactionid,description,transactionremarks,tranid,withdrawalamtinr"}
+          />
         </div>
         <div>
-          <h3>Water Charges</h3>
-          <FileUploader onDataParsed={handleWaterChargesUpload} />
+          <h3 title="flatno,monthjuly,monthaug,monthsept,total">Water Charges</h3>
+          <FileUploader
+            onDataParsed={handleWaterChargesUpload}
+            tooltip={"flatno,monthjuly,monthaug,monthsept,total"}
+          />
         </div>
       </div>
     </div>

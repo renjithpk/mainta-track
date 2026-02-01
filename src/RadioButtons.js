@@ -17,6 +17,10 @@ const RadioButtons = ({ view, setView }) => {
         <input type="radio" value="result" checked={view === "result"} onChange={() => setView("result")} />
         Result Sheet
       </label>
+      <label className="radio-button">
+        <input type="radio" value="watercharges" checked={view === "watercharges"} onChange={() => setView("watercharges")} />
+        Water Charges
+      </label>
     </div>
   );
 };

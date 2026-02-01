@@ -206,9 +206,27 @@ const App = () => {
     return null;
   };
 
+  const validateBankHeaders = (data) => {
+    if (!data || data.length === 0) return 'CSV file appears empty';
+    const headers = Object.keys(data[0]);
+    // Accept either new format (deposit/withdrawal) or old format (cr/dr)
+    const hasNewFormat = headers.includes('depositamtinr') || headers.includes('withdrawalamtinr') || headers.includes('transactionamountinr');
+    const hasOldFormat = headers.includes('crdr');
+    if (!hasNewFormat && !hasOldFormat) {
+      return 'Bank transactions CSV missing expected headers: depositamtinr or withdrawalamtinr or crdr';
+    }
+    return null;
+  };
+
   const handleBankTransactionsDataParsed = (data) => {
     console.log("Bank transactions data parsed:", data);
     try {
+      const headerError = validateBankHeaders(data);
+      if (headerError) {
+        setError(headerError);
+        return;
+      }
+      const headers = Object.keys(data[0] || {});
       let processedData = data;
 
       // Check if this is the new format (has withdrawal/deposit columns) or old format (has crdr column)
@@ -235,6 +253,74 @@ const App = () => {
         processedData = data.filter(row => row["crdr"].toLowerCase() !== 'dr');
       } else {
         setError("CSV format not recognized. Expected either new format with withdrawal/deposit columns or old format with cr/dr column.");
+        return;
+      }
+
+      if (!processedData || processedData.length === 0) {
+        // Provide a more specific error so the user knows which field is wrong or empty
+        if (hasNewFormat) {
+          const hasDepositHeader = data[0].hasOwnProperty('depositamtinr');
+          const hasTxnHeader = data[0].hasOwnProperty('transactionamountinr');
+          if (!hasDepositHeader && !hasTxnHeader) {
+            setError("Bank transactions CSV missing credit column: expected 'depositamtinr' or 'transactionamountinr'.");
+            return;
+          }
+
+          const field = hasDepositHeader ? 'depositamtinr' : 'transactionamountinr';
+          const anyNonEmpty = data.some(r => {
+            const v = r[field];
+            if (v === undefined || v === null || String(v).trim() === '') return false;
+            const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+            return !isNaN(n) && n !== 0;
+          });
+          if (!anyNonEmpty) {
+            setError(`Column '${field}' contains no credit values (all empty or zero).`);
+            return;
+          }
+        } else if (hasOldFormat) {
+          const anyCr = data.some(r => r['crdr'] && String(r['crdr']).toLowerCase().includes('cr'));
+          const anyDr = data.some(r => r['crdr'] && String(r['crdr']).toLowerCase().includes('dr'));
+          if (!anyCr && anyDr) {
+            setError("Field 'crdr' contains only debit (DR) entries; no credit (CR) entries found.");
+            return;
+          }
+          if (!anyCr && !anyDr) {
+            setError("Field 'crdr' contains no recognizable values; expected 'CR' or 'DR'.");
+            return;
+          }
+        }
+
+        // Build a diagnostic message so the user knows exactly what's present/missing
+        const headerList = headers.join(', ');
+        const depositCount = data.reduce((c, r) => {
+          const v = r.depositamtinr;
+          if (v === undefined || v === null || String(v).trim() === '') return c;
+          const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+          return c + (isNaN(n) ? 0 : (n !== 0 ? 1 : 0));
+        }, 0);
+        const txnAmtCount = data.reduce((c, r) => {
+          const v = r.transactionamountinr;
+          if (v === undefined || v === null || String(v).trim() === '') return c;
+          const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+          return c + (isNaN(n) ? 0 : (n !== 0 ? 1 : 0));
+        }, 0);
+        const crCount = data.reduce((c, r) => {
+          const v = r.crdr;
+          if (!v) return c;
+          const s = String(v).toLowerCase();
+          return c + (s.includes('cr') ? 1 : 0);
+        }, 0);
+        const drCount = data.reduce((c, r) => {
+          const v = r.crdr;
+          if (!v) return c;
+          const s = String(v).toLowerCase();
+          return c + (s.includes('dr') ? 1 : 0);
+        }, 0);
+
+        let diag = `No credit transactions found. Detected headers: ${headerList}.`;
+        diag += ` depositamtinr credits=${depositCount}; transactionamountinr credits=${txnAmtCount}; crdr CR=${crCount} DR=${drCount}.`;
+        diag += ` Ensure the CSV has a credit column with non-zero values (depositamtinr or transactionamountinr) or 'crdr' marked as CR.`;
+        setError(diag);
         return;
       }
 
@@ -269,7 +355,8 @@ const App = () => {
 
       const formatCurrency = (num) => {
         if (num === null || num === undefined || num === '') return '';
-        return `₹${Number(num).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+        // Return numeric string without currency symbol
+        return Number(num).toLocaleString('en-IN', { minimumFractionDigits: 2 });
       };
 
       const indexedData = data.map((row, index) => {
@@ -430,10 +517,31 @@ const App = () => {
         return "Transactions Sheet";
       case "result":
         return "Result Sheet";
+      case "watercharges":
+        return "Water Charges";
       default:
         return "Selected View";
     }
   };
+
+  const buildWaterColumns = React.useCallback(() => {
+    if (!waterChargesData || waterChargesData.length === 0) return [];
+    const keys = Object.keys(waterChargesData[0] || {});
+    // skip any index column named 'index'
+    const filtered = keys.filter(k => k.toLowerCase() !== 'index');
+    return filtered.map((k, i) => ({ id: `w_${i}_${k}`, header: k, accessorKey: k }));
+  }, [waterChargesData]);
+
+  const defaultWaterColumns = [
+    { id: 'w_index', header: 'Index', accessorKey: 'index' },
+    { id: 'w_flatno', header: 'Flat No', accessorKey: 'flatno' },
+    { id: 'w_month1', header: 'Month 1', accessorKey: 'monthjuly' },
+    { id: 'w_month2', header: 'Month 2', accessorKey: 'monthaug' },
+    { id: 'w_month3', header: 'Month 3', accessorKey: 'monthsept' },
+    { id: 'w_total', header: 'Total', accessorKey: 'total' },
+  ];
+
+  const waterChargesColumns = (waterChargesData && waterChargesData.length > 0) ? buildWaterColumns() : defaultWaterColumns;
 
   return (
     <div className="App">
@@ -458,7 +566,7 @@ const App = () => {
             />
           </label>
           <label>
-            Penalty per Day (₹):
+            Penalty per Day:
             <input
               type="number"
               value={dailyPenaltyRate}
@@ -476,7 +584,7 @@ const App = () => {
             <span>Include AMC</span>
           </label>
           <label>
-            AMC (₹):
+            AMC:
             <input
               type="number"
               value={amcValue}
@@ -526,6 +634,7 @@ const App = () => {
             {view === "maintenance" && <TableView columns={maintenanceColumns} data={previousMaintenanceData} viewType="maintenance" />}
             {view === "transaction" && <TableView columns={transactionColumns} data={bankTransactionsData} viewType="transaction" />}
             {view === "result" && <TableView columns={orderedVisibleResultColumns} data={resultData} viewType="result" onAssignFlat={handleAssignFlat} availableFlats={availableFlats} onExportManualMappings={exportManualMappings} />}
+            {view === "watercharges" && <TableView columns={waterChargesColumns} data={waterChargesData} viewType="watercharges" />}
           </div>
         </>
       )}

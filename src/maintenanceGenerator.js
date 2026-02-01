@@ -4,7 +4,7 @@
 export class MaintenanceSheetGenerator {
   constructor(options = {}) {
     this.FIXED_PENALTY_ARREARS = 4300; // Fixed penalty for significant arrears (kept but not used)
-    this.DAILY_PENALTY_RATE = options.dailyPenaltyRate || 20; // ₹20 per day
+  this.DAILY_PENALTY_RATE = options.dailyPenaltyRate || 20; // 20 per day
     this.GRACE_PERIOD_DAYS = 30; // 30 days grace period
   }
 
@@ -16,7 +16,8 @@ export class MaintenanceSheetGenerator {
 
   // Format number to Indian currency format
   formatCurrency(amount) {
-    return `₹${Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+    // Return numeric string formatted in Indian locale but without currency symbol
+    return Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 });
   }
 
   // Calculate penalty based on payment status and arrears
@@ -144,10 +145,10 @@ export class MaintenanceSheetGenerator {
         // Present the maintenance arrears as the signed difference (prevBalance - paidAmount)
         // so it reflects overpayments as negative values and outstanding as positive values.
         'Maintenance Arrears': this.formatCurrency(arrearsSigned),
-        [`Water Bill ${waterMonthsDisplay[0] || months[0]}`]: `रु ${water1.toLocaleString('en-IN')}`,
-        [`Water Bill ${waterMonthsDisplay[1] || months[1]}`]: `रु ${water2.toLocaleString('en-IN')}`,
-        [`Water Bill ${waterMonthsDisplay[2] || months[2]}`]: `रु ${water3.toLocaleString('en-IN')}`,
-        'Water Bill Total': `रु ${waterTotal.toLocaleString('en-IN')}`,
+        [`Water Bill ${waterMonthsDisplay[0] || months[0]}`]: `${water1.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+        [`Water Bill ${waterMonthsDisplay[1] || months[1]}`]: `${water2.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+        [`Water Bill ${waterMonthsDisplay[2] || months[2]}`]: `${water3.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+        'Water Bill Total': `${waterTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
         'Penalty': this.formatCurrency(penalty),
         'AMC': amcEnabled ? this.formatCurrency(amcVal) : '',
         'Balance': this.formatCurrency(totalBalance),
