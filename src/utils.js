@@ -1,5 +1,14 @@
 import levenshtein from 'fast-levenshtein';
 
+// Water billing months per maintenance quarter (use lower-case 3-letter month keys)
+// `q1` corresponds to maintenance quarter Q1 -> water billed for previous quarter Oct-Dec
+export const waterBillingMonths = {
+  q1: ['oct', 'nov', 'dec'],
+  q2: ['jan', 'feb', 'mar'],
+  q3: ['apr', 'may', 'jun'],
+  q4: ['jul', 'aug', 'sep'],
+};
+
 export const generateResultData = (previousMaintenanceData, bankTransactionsData, manualMappings = []) => {
   let result = [];
 

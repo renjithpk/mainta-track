@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import MaintenanceSheetGenerator from "./maintenanceGenerator";
 import TableView from './TableView';
 
-const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDate, dailyPenaltyRate, amcEnabled, amcValue }) => {
+const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDate, dailyPenaltyRate, amcEnabled, amcValue, quarter }) => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
@@ -67,6 +67,38 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
       setError("Please ensure all required data is available: previous maintenance, payment mapping, and water charges.");
       return;
     }
+    // Validate dueDate vs selected quarter rules
+    try {
+      if (quarter && typeof quarter === 'string') {
+        const m = quarter.match(/^Q([1-4])-(\d{2})$/);
+        if (m) {
+          const qNum = Number(m[1]);
+          const yy = Number(m[2]);
+          // Build full year from yy (assume 2000+)
+          const qYear = 2000 + yy;
+          if (qNum === 1) {
+            // previous quarter is Q4 of previous year
+            const prevQ = 4;
+            const prevYear = qYear - 1;
+            // dueDate must fall within prevQuarter months Oct-Dec of prevYear
+            const due = new Date(dueDate);
+            if (isNaN(due.getTime())) {
+              setError('Invalid due date');
+              return;
+            }
+            const dueMonth = due.getMonth(); // 0-11
+            const dueYear = due.getFullYear();
+            const validMonths = [9,10,11]; // Oct,Nov,Dec
+            if (dueYear !== prevYear || !validMonths.includes(dueMonth)) {
+              setError(`For ${quarter} maintenance, Due Date must be in previous quarter (Oct-Dec ${prevYear}).`);
+              return;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error validating quarter/dueDate', err);
+    }
     console.log("All data available, proceeding to generate");
     try {
       // Generate maintenance sheet
@@ -77,7 +109,7 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
         payments,
         waterCharges,
         {
-          quarter: "Current", // Not hardcoded
+          quarter: quarter || "Current",
           dueDate: dueDate,
           dailyPenaltyRate: dailyPenaltyRate,
           selectedColumns: columnSelected,

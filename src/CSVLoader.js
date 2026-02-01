@@ -1,7 +1,8 @@
 import React from "react";
 import FileUploader from "./FileUploader";
+import { waterBillingMonths } from './utils';
 
-const CSVLoader = ({ onPreviousMaintenanceDataParsed, onBankTransactionsDataParsed, onWaterChargesDataParsed }) => {
+const CSVLoader = ({ onPreviousMaintenanceDataParsed, onBankTransactionsDataParsed, onWaterChargesDataParsed, selectedQuarter }) => {
 
   const handleMaintenanceUpload = (data) => {
     onPreviousMaintenanceDataParsed(data);
@@ -33,11 +34,23 @@ const CSVLoader = ({ onPreviousMaintenanceDataParsed, onBankTransactionsDataPars
           />
         </div>
         <div>
-          <h3 title="flatno,monthjuly,monthaug,monthsept,total">Water Charges</h3>
-          <FileUploader
-            onDataParsed={handleWaterChargesUpload}
-            tooltip={"flatno,monthjuly,monthaug,monthsept,total"}
-          />
+          {(() => {
+            // Determine quarter key like 'q1' from selectedQuarter e.g. 'Q1-26'
+            const qMatch = (selectedQuarter || '').toString().toUpperCase().match(/Q([1-4])/);
+            const qKey = qMatch ? `q${qMatch[1]}` : null;
+            const months = qKey && waterBillingMonths[qKey] ? waterBillingMonths[qKey] : ['jul', 'aug', 'sep'];
+            const monthFields = months.map(m => `month${m}`).join(',');
+            const tooltip = `flatno,${monthFields},total`;
+            return (
+              <>
+                <h3 title={tooltip}>Water Charges</h3>
+                <FileUploader
+                  onDataParsed={handleWaterChargesUpload}
+                  tooltip={tooltip}
+                />
+              </>
+            );
+          })()}
         </div>
       </div>
     </div>

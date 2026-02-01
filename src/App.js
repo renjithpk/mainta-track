@@ -18,6 +18,18 @@ const App = () => {
   const [tabError, setTabError] = useState(null); // State for tab-specific errors
   const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
   const [dailyPenaltyRate, setDailyPenaltyRate] = useState(20);
+  const getDefaultQuarterLabel = (date = new Date()) => {
+    const month = date.getMonth(); // 0-based
+    const year = date.getFullYear();
+    const yy = String(year).slice(-2);
+    let q = 1;
+    if (month >= 0 && month <= 2) q = 1;
+    else if (month >= 3 && month <= 5) q = 2;
+    else if (month >= 6 && month <= 8) q = 3;
+    else q = 4;
+    return `Q${q}-${yy}`;
+  };
+  const [selectedQuarter, setSelectedQuarter] = useState(getDefaultQuarterLabel());
   const [amcEnabled, setAmcEnabled] = useState(false);
   const [amcValue, setAmcValue] = useState(3000);
 
@@ -553,6 +565,7 @@ const App = () => {
             onPreviousMaintenanceDataParsed={handlePreviousMaintenanceDataParsed}
             onBankTransactionsDataParsed={handleBankTransactionsDataParsed}
             onWaterChargesDataParsed={handleWaterChargesDataParsed}
+            selectedQuarter={selectedQuarter}
           />
         </div>
         <div className="settings-row" style={{ display: 'flex', gap: '20px', alignItems: 'center', marginTop: '10px' }}>
@@ -564,6 +577,16 @@ const App = () => {
               onChange={(e) => setDueDate(e.target.value)}
               style={{ marginLeft: '5px' }}
             />
+          </label>
+          <label>
+            Quarter:
+            <select value={selectedQuarter} onChange={(e) => setSelectedQuarter(e.target.value)} style={{ marginLeft: '5px' }}>
+              {[1,2,3,4].map(q => {
+                const year = new Date().getFullYear();
+                const yy = String(year).slice(-2);
+                return <option key={`Q${q}-${yy}`} value={`Q${q}-${yy}`}>{`Q${q}-${yy}`}</option>;
+              })}
+            </select>
           </label>
           <label>
             Penalty per Day:
@@ -653,6 +676,7 @@ const App = () => {
             dailyPenaltyRate={dailyPenaltyRate}
             amcEnabled={amcEnabled}
             amcValue={amcValue}
+            quarter={selectedQuarter}
           />
         </div>
       )}
