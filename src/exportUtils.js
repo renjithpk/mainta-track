@@ -72,14 +72,31 @@ export const exportToCSV = (data, columns, filename = 'export') => {
  * @param {string} viewType - Type of view (maintenance, transaction, result)
  * @returns {string} Generated filename
  */
-export const generateExportFilename = (viewType) => {
+export const generateExportFilename = (viewType, meta = {}) => {
   const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
   const viewNames = {
     maintenance: 'maintenance_sheet',
     transaction: 'bank_transactions', 
     result: 'matching_results'
   };
-  
+
+  // If quarter metadata provided for a generated maintenance export (often viewType 'result'),
+  // prefer a clearer maintenance filename like `Maintenance_Q1_2026`.
+  if (meta && meta.quarter) {
+    // Accept quarter formats like 'Q1-26' or 'Q1-2026' (two- or four-digit year)
+    const m = String(meta.quarter).toUpperCase().match(/^Q([1-4])[-_ ]?(\d{2,4})$/);
+    if (m) {
+      const q = m[1];
+      const yy = parseInt(m[2], 10);
+      const year = yy < 100 ? 2000 + yy : yy;
+      return `Maintenance_Q${q}_${year}`;
+    }
+    // If quarter not parseable but a filename was supplied, use it
+    if (meta.filename) {
+      return `${meta.filename}_${date}`;
+    }
+  }
+
   const baseName = viewNames[viewType] || 'export';
   return `${baseName}_${date}`;
 };

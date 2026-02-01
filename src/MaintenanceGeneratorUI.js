@@ -178,6 +178,7 @@ const MaintenanceGeneratorUI = ({ payments, prevMaintenance, waterCharges, dueDa
               columns={Object.keys(result[0]).map(k => ({ id: k, header: k, accessorKey: k }))}
               data={result}
               viewType="result"
+              exportMeta={{ quarter: quarter }}
             />
           </div>
         </div>

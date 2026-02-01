@@ -3,9 +3,9 @@ import './TableView.css'; // Import the CSS file
 import { exportToCSV, generateExportFilename } from './exportUtils';
 import AssignSelect from './AssignSelect';
 
-const TableView = ({ columns, data, viewType, onAssignFlat, availableFlats = [], onExportManualMappings }) => {
+const TableView = ({ columns, data, viewType, onAssignFlat, availableFlats = [], onExportManualMappings, exportMeta }) => {
   const handleExport = () => {
-    const filename = generateExportFilename(viewType);
+    const filename = generateExportFilename(viewType, exportMeta);
     exportToCSV(data, columns, filename);
   };
 

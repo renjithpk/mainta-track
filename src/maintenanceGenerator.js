@@ -162,6 +162,7 @@ export class MaintenanceSheetGenerator {
         'Resident Name': residentName,
         'Monthly': this.formatCurrency(monthlyMaintenance),
         [`${quarter} Maintenance`]: this.formatCurrency(quarterly),
+        'Current Maintenance': this.formatCurrency(quarterly),
         // Present the maintenance arrears as the signed difference (prevBalance - paidAmount)
         // so it reflects overpayments as negative values and outstanding as positive values.
         'Maintenance Arrears': this.formatCurrency(arrearsSigned),

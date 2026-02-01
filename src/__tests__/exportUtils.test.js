@@ -49,6 +49,11 @@ describe('Export Utilities', () => {
     expect(resultFilename).toMatch(/matching_results_\d{4}-\d{2}-\d{2}/);
   });
 
+  test('should generate maintenance-style filename when quarter meta provided', () => {
+    const filename = generateExportFilename('result', { quarter: 'Q1-26' });
+    expect(filename).toBe('Maintenance_Q1_2026');
+  });
+
   test('should handle unknown view types', () => {
     const filename = generateExportFilename('unknown');
     expect(filename).toMatch(/export_\d{4}-\d{2}-\d{2}/);
