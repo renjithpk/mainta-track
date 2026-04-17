@@ -17,7 +17,9 @@ const App = () => {
   const [error, setError] = useState(null); // State variable for error messages
   const [tabError, setTabError] = useState(null); // State for tab-specific errors
   const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
-  const [dailyPenaltyRate, setDailyPenaltyRate] = useState(20);
+  const [dailyPenaltyRate, setDailyPenaltyRate] = useState(50);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
   const getDefaultQuarterLabel = (date = new Date()) => {
     const month = date.getMonth(); // 0-based
     const year = date.getFullYear();
@@ -30,6 +32,17 @@ const App = () => {
     return `Q${q}-${yy}`;
   };
   const [selectedQuarter, setSelectedQuarter] = useState(getDefaultQuarterLabel());
+
+  const handleYearChange = (e) => {
+    const newYear = parseInt(e.target.value, 10);
+    setSelectedYear(newYear);
+    const currentQMatch = selectedQuarter.match(/^Q([1-4])/);
+    if (currentQMatch) {
+      const qNum = currentQMatch[1];
+      const yy = String(newYear).slice(-2);
+      setSelectedQuarter(`Q${qNum}-${yy}`);
+    }
+  };
   const [amcEnabled, setAmcEnabled] = useState(false);
   const [amcValue, setAmcValue] = useState(3000);
 
@@ -666,11 +679,18 @@ const App = () => {
             />
           </label>
           <label>
+            Year:
+            <select value={selectedYear} onChange={handleYearChange} style={{ marginLeft: '5px' }}>
+              {[2023, 2024, 2025, 2026, 2027, 2028].map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </label>
+          <label>
             Quarter:
             <select value={selectedQuarter} onChange={(e) => setSelectedQuarter(e.target.value)} style={{ marginLeft: '5px' }}>
               {[1,2,3,4].map(q => {
-                const year = new Date().getFullYear();
-                const yy = String(year).slice(-2);
+                const yy = String(selectedYear).slice(-2);
                 return <option key={`Q${q}-${yy}`} value={`Q${q}-${yy}`}>{`Q${q}-${yy}`}</option>;
               })}
             </select>

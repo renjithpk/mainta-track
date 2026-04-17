@@ -23,6 +23,7 @@ const FileUploader = ({ onDataParsed, tooltip }) => {
         type="file"
         accept=".csv"
         onChange={handleFileUpload}
+        onClick={(e) => { e.target.value = null; }}
         className="file-input"
         title={tooltip || ''}
         aria-label={tooltip || 'Upload CSV file'}
