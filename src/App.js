@@ -17,7 +17,7 @@ const App = () => {
   const [error, setError] = useState(null); // State variable for error messages
   const [tabError, setTabError] = useState(null); // State for tab-specific errors
   const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
-  const [dailyPenaltyRate, setDailyPenaltyRate] = useState(20);
+  const [dailyPenaltyRate, setDailyPenaltyRate] = useState(50);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const getDefaultQuarterLabel = (date = new Date()) => {
@@ -689,7 +689,7 @@ const App = () => {
           <label>
             Quarter:
             <select value={selectedQuarter} onChange={(e) => setSelectedQuarter(e.target.value)} style={{ marginLeft: '5px' }}>
-              {[1, 2, 3, 4].map(q => {
+              {[1,2,3,4].map(q => {
                 const yy = String(selectedYear).slice(-2);
                 return <option key={`Q${q}-${yy}`} value={`Q${q}-${yy}`}>{`Q${q}-${yy}`}</option>;
               })}
