@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/mainta-track/static/css/main.2fc65508.css",
-    "main.js": "/mainta-track/static/js/main.2b98742c.js",
+    "main.js": "/mainta-track/static/js/main.a2e040ba.js",
     "static/js/488.cdeb3b1d.chunk.js": "/mainta-track/static/js/488.cdeb3b1d.chunk.js",
     "index.html": "/mainta-track/index.html",
     "main.2fc65508.css.map": "/mainta-track/static/css/main.2fc65508.css.map",
-    "main.2b98742c.js.map": "/mainta-track/static/js/main.2b98742c.js.map",
+    "main.a2e040ba.js.map": "/mainta-track/static/js/main.a2e040ba.js.map",
     "488.cdeb3b1d.chunk.js.map": "/mainta-track/static/js/488.cdeb3b1d.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.2fc65508.css",
-    "static/js/main.2b98742c.js"
+    "static/js/main.a2e040ba.js"
   ]
 }
