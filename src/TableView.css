@@ -1,0 +1,85 @@
+.table-view-container {
+  margin: 20px 0;
+  overflow-x: auto;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 10px 0;
+}
+
+.table-info {
+  display: flex;
+  align-items: center;
+}
+
+.record-count {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.export-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.export-button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.export-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.table-view {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 auto;
+  background-color: #fff;
+}
+
+.table-view th,
+.table-view td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.table-view th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
+
+.table-view tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.table-view tr:hover {
+  background-color: #ddd;
+}
+
+/* Assign select styling: keep the visible control compact, but avoid wrapping inside options
+   so some browsers will expand the dropdown list to show full labels. */
+.assign-select {
+  width: auto;
+  min-width: 80px;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.assign-select option {
+  white-space: nowrap;
+}
