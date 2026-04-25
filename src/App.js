@@ -14,6 +14,7 @@ const App = () => {
   const [bankTransactionsData, setBankTransactionsData] = useState([]);
   const [waterChargesData, setWaterChargesData] = useState([]);
   const [resultData, setResultData] = useState([]);
+  const [manualMappings, setManualMappings] = useState([]); // in-memory manual mappings: { flatNo, transactionId, reason }
   const [error, setError] = useState(null); // State variable for error messages
   const [tabError, setTabError] = useState(null); // State for tab-specific errors
   const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
@@ -279,8 +280,8 @@ const App = () => {
         }));
 
       if (!processedData || processedData.length === 0) {
-         setError("No valid positive credit transactions found in the loaded CSV file.");
-         return;
+        setError("No valid positive credit transactions found in the loaded CSV file.");
+        return;
       }
 
       setBankTransactionsData(processedData);
@@ -593,7 +594,7 @@ const App = () => {
           <label>
             Quarter:
             <select value={selectedQuarter} onChange={(e) => setSelectedQuarter(e.target.value)} style={{ marginLeft: '5px' }}>
-              {[1,2,3,4].map(q => {
+              {[1, 2, 3, 4].map(q => {
                 const yy = String(selectedYear).slice(-2);
                 return <option key={`Q${q}-${yy}`} value={`Q${q}-${yy}`}>{`Q${q}-${yy}`}</option>;
               })}

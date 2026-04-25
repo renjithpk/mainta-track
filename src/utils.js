@@ -300,6 +300,62 @@ function assignTransactionsByOnlyName(maintenanceList, transactionList, result) 
   return buildFilteredResponse(maintenanceList, transactionList, result);
 }
 
+/**
+ * Apply manual mappings supplied by the user.
+ * manualMappings: [{ flatNo, transactionId, reason? }]
+ */
+function byManualMapping(manualMappings, maintenanceList, transactionList, result) {
+  console.log('Applying manual mappings:', manualMappings.length);
+
+  // Build quick lookup maps for efficiency
+  const txById = new Map();
+  transactionList.forEach((tx, idx) => {
+    if (tx && tx.transactionid) txById.set(tx.transactionid.toString().trim(), { tx, idx });
+  });
+
+  const mByFlat = new Map();
+  maintenanceList.forEach((m, idx) => {
+    if (m && m.flatno) mByFlat.set(m.flatno.toString().trim(), { m, idx });
+  });
+
+  manualMappings.forEach((mapping) => {
+    try {
+      const flat = (mapping.flatNo || mapping.flatno || mapping.flat || '').toString().trim();
+      const txId = (mapping.transactionId || mapping.transactionid || mapping.txid || '').toString().trim();
+      const reason = mapping.reason || mapping.assignReason || '';
+
+      if (!flat && !txId) return; // nothing to do
+
+      const txEntry = txId ? txById.get(txId) : null;
+      const maintEntry = flat ? mByFlat.get(flat) : null;
+
+      if (txEntry && maintEntry) {
+        // both exist: mark assigned and push result
+        const tx = txEntry.tx;
+        const m = maintEntry.m;
+        tx.assigned = true;
+        m.assigned = true;
+        const conf = `manually assigned${reason ? `: ${reason}` : ''}`;
+        result.push(buildResult(m, tx, conf));
+      } else if (txEntry && !maintEntry) {
+        // transaction exists but maintenance row missing: emit transaction-only result so operator can attach later
+        const tx = txEntry.tx;
+        tx.assigned = true;
+        result.push(buildResult({ index: '', flatno: '', residentname: '', balance: '', assigned: false }, tx, `manually assigned (no maintenance): ${reason}`));
+      } else if (!txEntry && maintEntry) {
+        // maintenance exists but transaction missing: mark maintenance assigned and push an empty transaction
+        const m = maintEntry.m;
+        m.assigned = true;
+        result.push(buildResult(m, { transactionid: '', description: '', transactionamountinr: '' }, `manually assigned (no transaction): ${reason}`));
+      }
+    } catch (err) {
+      console.error('Error applying manual mapping', mapping, err);
+    }
+  });
+
+  return buildFilteredResponse(maintenanceList, transactionList, result);
+}
+
 function buildResult(maintenance, transaction, confidence) {
   return {
     // propagate maintenance fields first so original CSV columns are available as top-level fields
@@ -460,10 +516,10 @@ export function isSameFlat(flat1, flat2) {
 export function parseCurrency(currencyStr) {
   if (currencyStr === undefined || currencyStr === null || currencyStr === '') return 0;
   if (typeof currencyStr === 'number') return currencyStr;
-  
+
   // Remove commas and spaces
   let str = String(currencyStr).replace(/[, ]/g, '');
-  
+
   // Match the first valid numeric pattern (optional negative sign, digits, optional decimal part)
   const match = str.match(/-?\d+(\.\d+)?/);
   if (match) {
