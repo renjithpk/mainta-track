@@ -1,5 +1,6 @@
 // Browser-friendly MaintenanceSheetGenerator
 // Pure JS class for use in the React app (no fs or Papa dependencies)
+import { normalizeFlatNo, isSameFlat } from './utils';
 
 export class MaintenanceSheetGenerator {
   constructor(options = {}) {
@@ -145,17 +146,30 @@ export class MaintenanceSheetGenerator {
     }
 
     const out = [];
+    const missingWaterChargeFlats = [];
 
     prevData.forEach((row) => {
       if (!row['flatno'] && !row['flatno ']) return;
       const flatKey = row['flatno'] ? 'flatno' : 'flatno ';
       const flatNo = String(row[flatKey]).trim();
+      
       const residentName = row['residentname'] || row['residentname'] || '';
       const monthlyMaintenance = this.parseCurrency(row['monthly'] || row['monthly'] || row['monthly ']);
       const prevBalance = this.parseCurrency(row['balance'] || row['balance']);
 
-      const paymentRecord = paymentRecords.find(p => p.flatNo && String(p.flatNo).trim() === flatNo);
-      const waterCharges = waterChargesData.find(w => (w['flatno'] === flatNo) || (w['flatno '] === flatNo) || (w['flatno'] && String(w['flatno']).trim() === flatNo));
+      const paymentRecord = paymentRecords.find(p => p.flatNo && isSameFlat(p.flatNo, flatNo));
+      
+      let waterCharges = null;
+      if (waterChargesData && waterChargesData.length > 0) {
+        waterCharges = waterChargesData.find(w => {
+          const wFlat = w['flatno'] || w['flatno '];
+          return isSameFlat(wFlat, flatNo);
+        });
+
+        if (!waterCharges) {
+          missingWaterChargeFlats.push(flatNo);
+        }
+      }
 
       const paidAmount = paymentRecord ? this.parseCurrency(paymentRecord.transactionamountinr) : 0;
 
@@ -230,6 +244,10 @@ export class MaintenanceSheetGenerator {
 
       out.push(filteredRow);
     });
+
+    if (missingWaterChargeFlats.length > 0) {
+      throw new Error(`Missing water charges for flats: ${missingWaterChargeFlats.join(', ')}. Please ensure flat numbers match the main maintenance sheet exactly.`);
+    }
 
     console.log("Generated maintenance sheet with", out.length, "records");
     return out;

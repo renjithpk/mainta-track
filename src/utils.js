@@ -446,3 +446,13 @@ export function matchingNameInTransaction(description, name) {
     descTokens.some(descToken => isSimilar(nameToken, descToken))
   );
 }
+
+export function normalizeFlatNo(flat) {
+  if (!flat) return '';
+  return String(flat).replace(/[^A-Z0-9]/gi, '').toUpperCase();
+}
+
+export function isSameFlat(flat1, flat2) {
+  if (!flat1 || !flat2) return false;
+  return normalizeFlatNo(flat1) === normalizeFlatNo(flat2);
+}

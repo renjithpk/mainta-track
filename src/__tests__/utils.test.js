@@ -1,5 +1,5 @@
 // src/utils.test.js
-import { extractFlatNumber, tokenizeInput, findTokenDistance, matchingNameInTransaction, isSimilar } from "../utils";
+import { extractFlatNumber, tokenizeInput, findTokenDistance, matchingNameInTransaction, isSimilar, normalizeFlatNo, isSameFlat } from "../utils";
 
 
 
@@ -147,5 +147,33 @@ describe('isSimilar', () => {
 
   ])('isSimilar(%s, %s, %s) should return %s', (name, desc, threshold, expected) => {
     expect(isSimilar(name, desc, threshold)).toBe(expected);
+  });
+});
+
+describe('normalizeFlatNo', () => {
+  test.each([
+    ["B-311 TF", "B311TF"],
+    ["b311tf", "B311TF"],
+    [" B 311TF ", "B311TF"],
+    ["101", "101"],
+    [null, ""],
+    [undefined, ""]
+  ])('normalizeFlatNo(%s) should return %s', (input, expected) => {
+    expect(normalizeFlatNo(input)).toBe(expected);
+  });
+});
+
+describe('isSameFlat', () => {
+  test.each([
+    ["B-311 TF", "B311TF", true],
+    ["b311tf", "B311TF", true],
+    [" B 311TF ", "B311TF", true],
+    ["101", "101", true],
+    ["101", "102", false],
+    ["A101", "B101", false],
+    [null, "B311TF", false],
+    ["B311TF", null, false]
+  ])('isSameFlat(%s, %s) should return %s', (flat1, flat2, expected) => {
+    expect(isSameFlat(flat1, flat2)).toBe(expected);
   });
 });
