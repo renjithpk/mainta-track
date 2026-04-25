@@ -1,5 +1,5 @@
 // src/utils.test.js
-import { extractFlatNumber, tokenizeInput, findTokenDistance, matchingNameInTransaction, isSimilar, normalizeFlatNo, isSameFlat } from "../utils";
+import { extractFlatNumber, tokenizeInput, findTokenDistance, matchingNameInTransaction, isSimilar, normalizeFlatNo, isSameFlat, parseCurrency } from "../utils";
 
 
 
@@ -175,5 +175,27 @@ describe('isSameFlat', () => {
     ["B311TF", null, false]
   ])('isSameFlat(%s, %s) should return %s', (flat1, flat2, expected) => {
     expect(isSameFlat(flat1, flat2)).toBe(expected);
+  });
+});
+
+describe('parseCurrency', () => {
+  test.each([
+    ["500", 500],
+    ["500.50", 500.5],
+    ["-500", -500],
+    ["-500.50", -500.5],
+    ["- 500.50", -500.5],
+    ["₹500.00", 500],
+    ["Rs. 1,500.00", 1500],
+    ["-1,500.00", -1500],
+    ["100-", 100], // unusual case
+    [500, 500],
+    [-500.5, -500.5],
+    ["", 0],
+    [null, 0],
+    [undefined, 0],
+    ["abc", 0]
+  ])('parseCurrency(%s) should return %s', (input, expected) => {
+    expect(parseCurrency(input)).toBe(expected);
   });
 });

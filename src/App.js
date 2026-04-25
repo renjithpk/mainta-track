@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import TableView from "./TableView";
 import CSVLoader from "./CSVLoader";
 import RadioButtons from "./RadioButtons";
-import { generateResultData, waterBillingMonths } from "./utils";
+import { generateResultData, waterBillingMonths, parseCurrency } from "./utils";
 import { exportToCSV } from "./exportUtils";
 import './App.css';
 import MaintenanceGeneratorUI from "./MaintenanceGeneratorUI";
@@ -264,9 +264,9 @@ const App = () => {
           // Check for valid valid amount to keep the row
           const amt = row.amount;
           if (amt === undefined || amt === null || String(amt).trim() === '') return false;
-          const parsedLevel = parseFloat(String(amt).replace(/[^0-9.\-]/g, ''));
+          const parsedLevel = parseCurrency(amt);
           // keep positive amounts
-          return !isNaN(parsedLevel) && parsedLevel > 0;
+          return parsedLevel > 0;
         })
         .map((row, index) => ({
           index: index + 1, // Adding a 1-based index
@@ -298,14 +298,7 @@ const App = () => {
     }
 
     try {
-      // helper to parse currency-like strings to number
-      const parseCurrency = (val) => {
-        if (val === undefined || val === null || val === "") return 0;
-        // If it's already a number, return it
-        if (typeof val === 'number') return val;
-        const n = parseFloat(String(val).replace(/[^0-9.\-]/g, ''));
-        return isNaN(n) ? 0 : n;
-      };
+
 
       const formatCurrency = (num) => {
         if (num === null || num === undefined || num === '') return '';
@@ -396,15 +389,8 @@ const App = () => {
         monthAccessors = normKeys.filter(k => /^(month)?(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/.test(k.norm)).map(k => k.raw);
       }
 
-      const parseNum = (v) => {
-        if (v === undefined || v === null || v === '') return 0;
-        if (typeof v === 'number') return v;
-        const n = parseFloat(String(v).replace(/[^0-9.-]/g, ''));
-        return isNaN(n) ? 0 : n;
-      };
-
       const indexedData = data.map((row, index) => {
-        const total = monthAccessors.reduce((sum, key) => sum + parseNum(row[key]), 0);
+        const total = monthAccessors.reduce((sum, key) => sum + parseCurrency(row[key]), 0);
         return {
           index: index + 1, // Adding a 1-based index
           ...row,

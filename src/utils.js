@@ -52,7 +52,7 @@ function preprocessMaintenance(previousMaintenanceData) {
     try {
       return {
         ...row,
-        balance: row?.balance?.replace(/[^0-9.]/g, ""),
+        balance: parseCurrency(row?.balance),
         // preserve any existing assigned flag
         assigned: row?.assigned === true,
       };
@@ -455,4 +455,19 @@ export function normalizeFlatNo(flat) {
 export function isSameFlat(flat1, flat2) {
   if (!flat1 || !flat2) return false;
   return normalizeFlatNo(flat1) === normalizeFlatNo(flat2);
+}
+
+export function parseCurrency(currencyStr) {
+  if (currencyStr === undefined || currencyStr === null || currencyStr === '') return 0;
+  if (typeof currencyStr === 'number') return currencyStr;
+  
+  // Remove commas and spaces
+  let str = String(currencyStr).replace(/[, ]/g, '');
+  
+  // Match the first valid numeric pattern (optional negative sign, digits, optional decimal part)
+  const match = str.match(/-?\d+(\.\d+)?/);
+  if (match) {
+    return parseFloat(match[0]);
+  }
+  return 0;
 }
