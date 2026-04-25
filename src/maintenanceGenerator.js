@@ -1,6 +1,6 @@
 // Browser-friendly MaintenanceSheetGenerator
 // Pure JS class for use in the React app (no fs or Papa dependencies)
-import { normalizeFlatNo, isSameFlat } from './utils';
+import { normalizeFlatNo, isSameFlat, parseCurrency } from './utils';
 
 export class MaintenanceSheetGenerator {
   constructor(options = {}) {
@@ -9,11 +9,6 @@ export class MaintenanceSheetGenerator {
     this.GRACE_PERIOD_DAYS = 30; // 30 days grace period
   }
 
-  // Parse currency string to number
-  parseCurrency(currencyStr) {
-    if (!currencyStr && currencyStr !== 0) return 0;
-    return parseFloat(String(currencyStr).replace(/[^0-9.]/g, '')) || 0;
-  }
 
   // Format number to Indian currency format
   formatCurrency(amount) {
@@ -45,7 +40,7 @@ export class MaintenanceSheetGenerator {
 
     // Normalize paymentRecord: treat zero-amount or missing/invalid date as no payment
     if (paymentRecord) {
-      const amount = (typeof paymentRecord.amount === 'number') ? paymentRecord.amount : (parseFloat(paymentRecord.amount) || 0);
+      const amount = (typeof paymentRecord.amount === 'number') ? paymentRecord.amount : parseCurrency(paymentRecord.amount);
       parsedPaymentDate = parseBankDate(paymentRecord.transactionDate);
       if (amount <= 0 || !parsedPaymentDate) {
         paymentRecord = null;
@@ -55,7 +50,8 @@ export class MaintenanceSheetGenerator {
     const daysLateFrom = (referenceDate) => {
       const normalized = normalizeDate(referenceDate);
       const diff = normalized.getTime() - dueDateOnly.getTime();
-      return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      return days > this.GRACE_PERIOD_DAYS ? days - this.GRACE_PERIOD_DAYS : 0;
     };
 
     // 1. If the resident STILL has arrears
@@ -154,8 +150,8 @@ export class MaintenanceSheetGenerator {
       const flatNo = String(row[flatKey]).trim();
       
       const residentName = row['residentname'] || row['residentname'] || '';
-      const monthlyMaintenance = this.parseCurrency(row['monthly'] || row['monthly'] || row['monthly ']);
-      const prevBalance = this.parseCurrency(row['balance'] || row['balance']);
+      const monthlyMaintenance = parseCurrency(row['monthly'] || row['monthly'] || row['monthly ']);
+      const prevBalance = parseCurrency(row['balance'] || row['balance']);
 
       const paymentRecord = paymentRecords.find(p => p.flatNo && isSameFlat(p.flatNo, flatNo));
       
@@ -171,7 +167,7 @@ export class MaintenanceSheetGenerator {
         }
       }
 
-      const paidAmount = paymentRecord ? this.parseCurrency(paymentRecord.transactionamountinr) : 0;
+      const paidAmount = paymentRecord ? parseCurrency(paymentRecord.transactionamountinr) : 0;
 
       // Arrears (signed) = previous maintenance (balance) - amount paid
       // This can be negative (overpayment) or positive (outstanding).
@@ -181,14 +177,14 @@ export class MaintenanceSheetGenerator {
 
       const quarterly = monthlyMaintenance * 3;
 
-      const water1 = waterCharges ? this.parseCurrency(waterCharges[waterMonths[0]]) : 0;
-      const water2 = waterCharges ? this.parseCurrency(waterCharges[waterMonths[1]]) : 0;
-      const water3 = waterCharges ? this.parseCurrency(waterCharges[waterMonths[2]]) : 0;
+      const water1 = waterCharges ? parseCurrency(waterCharges[waterMonths[0]]) : 0;
+      const water2 = waterCharges ? parseCurrency(waterCharges[waterMonths[1]]) : 0;
+      const water3 = waterCharges ? parseCurrency(waterCharges[waterMonths[2]]) : 0;
 
 
-      const penalty = this.calculatePenalty({ flatNo, arrears: newArrears, prevBalance }, paymentRecord ? { transactionDate: paymentRecord.transactiondate, amount: this.parseCurrency(paymentRecord.transactionamountinr) } : null, dueDate);
+      const penalty = this.calculatePenalty({ flatNo, arrears: newArrears, prevBalance }, paymentRecord ? { transactionDate: paymentRecord.transactiondate, amount: parseCurrency(paymentRecord.transactionamountinr) } : null, dueDate);
 
-      const amcVal = amcEnabled ? this.parseCurrency(amcValue) : 0;
+      const amcVal = amcEnabled ? parseCurrency(amcValue) : 0;
 
       // Use signed arrears in total balance so negative arrears (overpayments) subtract from the due amount
       const totalBalance = quarterly + arrearsSigned + water1 + water2 + water3 + penalty + amcVal;
@@ -214,7 +210,7 @@ export class MaintenanceSheetGenerator {
         // Previous maintenance columns
         'Previous Maintenance': this.formatCurrency(prevBalance),
         // Payment columns
-        'Transaction Amount': paymentRecord ? this.formatCurrency(this.parseCurrency(paymentRecord.transactionamountinr)) : '',
+        'Transaction Amount': paymentRecord ? this.formatCurrency(parseCurrency(paymentRecord.transactionamountinr)) : '',
         'Transaction ID': paymentRecord ? paymentRecord.transactionid || '' : '',
         'Transaction Date': paymentRecord ? paymentRecord.transactiondate || '' : '',
         'Description': paymentRecord ? paymentRecord.description || '' : '',
