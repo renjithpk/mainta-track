@@ -60,14 +60,10 @@ const App = () => {
 
   const transactionColumns = [
     { id: "index", header: "Index", accessorKey: "index" },
+    { id: "transactiondate", header: "Date", accessorKey: "transactiondate" },
     { id: "transactionid", header: "Transaction ID", accessorKey: "transactionid" },
-    { id: "transactiondate", header: "Transaction Date", accessorKey: "transactiondate" },
     { id: "description", header: "Description", accessorKey: "description" },
-    { id: "transactionamountinr", header: "Transaction Amount (INR)", accessorKey: "transactionamountinr" },
-    { id: "withdrawalamtinr", header: "Withdrawal Amt (INR)", accessorKey: "withdrawalamtinr" },
-    { id: "depositamtinr", header: "Deposit Amt (INR)", accessorKey: "depositamtinr" },
-    { id: "tranid", header: "Tran. Id", accessorKey: "tranid" },
-    { id: "transactionremarks", header: "Transaction Remarks", accessorKey: "transactionremarks" },
+    { id: "transactionamountinr", header: "Amount", accessorKey: "transactionamountinr" },
   ];
 
   const getQuarterMonths = (quarterLabel) => {
@@ -245,11 +241,10 @@ const App = () => {
   const validateBankHeaders = (data) => {
     if (!data || data.length === 0) return 'CSV file appears empty';
     const headers = Object.keys(data[0]);
-    // Accept either new format (deposit/withdrawal) or old format (cr/dr)
-    const hasNewFormat = headers.includes('depositamtinr') || headers.includes('withdrawalamtinr') || headers.includes('transactionamountinr');
-    const hasOldFormat = headers.includes('crdr');
-    if (!hasNewFormat && !hasOldFormat) {
-      return 'Bank transactions CSV missing expected headers: depositamtinr or withdrawalamtinr or crdr';
+    const required = ['date', 'transactionid', 'description', 'amount'];
+    const missing = required.filter(r => !headers.includes(r));
+    if (missing.length > 0) {
+      return `Bank transactions CSV missing expected headers: ${missing.join(', ')}`;
     }
     return null;
   };
@@ -262,110 +257,33 @@ const App = () => {
         setError(headerError);
         return;
       }
-      const headers = Object.keys(data[0] || {});
-      let processedData = data;
 
-      // Check if this is the new format (has withdrawal/deposit columns) or old format (has crdr column)
-      const hasNewFormat = data.length > 0 && (data[0].hasOwnProperty('withdrawalamtinr') || data[0].hasOwnProperty('depositamtinr'));
-      const hasOldFormat = data.length > 0 && data[0].hasOwnProperty('crdr');
-
-      if (hasNewFormat) {
-        // New format: process withdrawal/deposit columns
-        processedData = data
-          .filter(row => {
-            // Only include deposit transactions (credits) - skip withdrawals (debits)
-            return row.depositamtinr && row.depositamtinr !== "" && row.depositamtinr !== null;
-          })
-          .map(row => ({
-            ...row,
-            // Create unified transaction amount from deposit amount
-            transactionamountinr: row.depositamtinr,
-            // Map description from transaction remarks and map transaction ID
-            description: row.transactionremarks || row.description || "",
-            transactionid: row.tranid || row.transactionid || ""
-          }));
-      } else if (hasOldFormat) {
-        // Old format: filter out debit transactions
-        processedData = data.filter(row => row["crdr"].toLowerCase() !== 'dr');
-      } else {
-        setError("CSV format not recognized. Expected either new format with withdrawal/deposit columns or old format with cr/dr column.");
-        return;
-      }
+      // Process and map the simplified mandatory columns
+      const processedData = data
+        .filter(row => {
+          // Check for valid valid amount to keep the row
+          const amt = row.amount;
+          if (amt === undefined || amt === null || String(amt).trim() === '') return false;
+          const parsedLevel = parseFloat(String(amt).replace(/[^0-9.\-]/g, ''));
+          // keep positive amounts
+          return !isNaN(parsedLevel) && parsedLevel > 0;
+        })
+        .map((row, index) => ({
+          index: index + 1, // Adding a 1-based index
+          ...row,
+          // Map standard columns to internal keys
+          transactiondate: row.date || "",
+          transactionid: row.transactionid || "",
+          description: row.description || "",
+          transactionamountinr: row.amount || 0
+        }));
 
       if (!processedData || processedData.length === 0) {
-        // Provide a more specific error so the user knows which field is wrong or empty
-        if (hasNewFormat) {
-          const hasDepositHeader = data[0].hasOwnProperty('depositamtinr');
-          const hasTxnHeader = data[0].hasOwnProperty('transactionamountinr');
-          if (!hasDepositHeader && !hasTxnHeader) {
-            setError("Bank transactions CSV missing credit column: expected 'depositamtinr' or 'transactionamountinr'.");
-            return;
-          }
-
-          const field = hasDepositHeader ? 'depositamtinr' : 'transactionamountinr';
-          const anyNonEmpty = data.some(r => {
-            const v = r[field];
-            if (v === undefined || v === null || String(v).trim() === '') return false;
-            const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
-            return !isNaN(n) && n !== 0;
-          });
-          if (!anyNonEmpty) {
-            setError(`Column '${field}' contains no credit values (all empty or zero).`);
-            return;
-          }
-        } else if (hasOldFormat) {
-          const anyCr = data.some(r => r['crdr'] && String(r['crdr']).toLowerCase().includes('cr'));
-          const anyDr = data.some(r => r['crdr'] && String(r['crdr']).toLowerCase().includes('dr'));
-          if (!anyCr && anyDr) {
-            setError("Field 'crdr' contains only debit (DR) entries; no credit (CR) entries found.");
-            return;
-          }
-          if (!anyCr && !anyDr) {
-            setError("Field 'crdr' contains no recognizable values; expected 'CR' or 'DR'.");
-            return;
-          }
-        }
-
-        // Build a diagnostic message so the user knows exactly what's present/missing
-        const headerList = headers.join(', ');
-        const depositCount = data.reduce((c, r) => {
-          const v = r.depositamtinr;
-          if (v === undefined || v === null || String(v).trim() === '') return c;
-          const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
-          return c + (isNaN(n) ? 0 : (n !== 0 ? 1 : 0));
-        }, 0);
-        const txnAmtCount = data.reduce((c, r) => {
-          const v = r.transactionamountinr;
-          if (v === undefined || v === null || String(v).trim() === '') return c;
-          const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
-          return c + (isNaN(n) ? 0 : (n !== 0 ? 1 : 0));
-        }, 0);
-        const crCount = data.reduce((c, r) => {
-          const v = r.crdr;
-          if (!v) return c;
-          const s = String(v).toLowerCase();
-          return c + (s.includes('cr') ? 1 : 0);
-        }, 0);
-        const drCount = data.reduce((c, r) => {
-          const v = r.crdr;
-          if (!v) return c;
-          const s = String(v).toLowerCase();
-          return c + (s.includes('dr') ? 1 : 0);
-        }, 0);
-
-        let diag = `No credit transactions found. Detected headers: ${headerList}.`;
-        diag += ` depositamtinr credits=${depositCount}; transactionamountinr credits=${txnAmtCount}; crdr CR=${crCount} DR=${drCount}.`;
-        diag += ` Ensure the CSV has a credit column with non-zero values (depositamtinr or transactionamountinr) or 'crdr' marked as CR.`;
-        setError(diag);
-        return;
+         setError("No valid positive credit transactions found in the loaded CSV file.");
+         return;
       }
 
-      const indexedData = processedData.map((row, index) => ({
-        index: index + 1, // Adding a 1-based index
-        ...row,
-      }));
-
-      setBankTransactionsData(indexedData);
+      setBankTransactionsData(processedData);
       setError(null); // Clear any previous errors
     } catch (err) {
       setError("Failed to parse bank transactions CSV: " + err.message);

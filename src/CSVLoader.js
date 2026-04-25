@@ -27,10 +27,10 @@ const CSVLoader = ({ onPreviousMaintenanceDataParsed, onBankTransactionsDataPars
           />
         </div>
         <div>
-          <h3 title="depositamtinr,transactionamountinr,crdr">Bank Transactions</h3>
+          <h3 title="date,transactionid,description,amount">Bank Transactions</h3>
           <FileUploader
             onDataParsed={handleBankTransactionsUpload}
-            tooltip={"depositamtinr,transactionamountinr,crdr,transactiondate,transactionid,description,transactionremarks,tranid,withdrawalamtinr"}
+            tooltip={"date,transactionid,description,amount"}
           />
         </div>
         <div>

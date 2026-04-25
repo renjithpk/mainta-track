@@ -28,11 +28,25 @@ export class MaintenanceSheetGenerator {
     const normalizeDate = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const dueDateOnly = normalizeDate(dueDateObj);
 
+    // Helper to safely parse dates, especially DD/MM/YYYY which is common in bank exports
+    const parseBankDate = (dateStr) => {
+      if (!dateStr) return null;
+      // Match typical DD/MM/YYYY or DD-MM-YYYY
+      const match = String(dateStr).match(/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})/);
+      if (match) {
+        return new Date(match[3], match[2] - 1, match[1]);
+      }
+      const d = new Date(dateStr);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    let parsedPaymentDate = null;
+
     // Normalize paymentRecord: treat zero-amount or missing/invalid date as no payment
     if (paymentRecord) {
       const amount = (typeof paymentRecord.amount === 'number') ? paymentRecord.amount : (parseFloat(paymentRecord.amount) || 0);
-      const paymentDateValid = paymentRecord.transactionDate && !isNaN(new Date(paymentRecord.transactionDate).getTime());
-      if (amount <= 0 || !paymentDateValid) {
+      parsedPaymentDate = parseBankDate(paymentRecord.transactionDate);
+      if (amount <= 0 || !parsedPaymentDate) {
         paymentRecord = null;
       }
     }
@@ -43,30 +57,30 @@ export class MaintenanceSheetGenerator {
       return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
     };
 
-    // If there is no payment record, charge penalty from due date to today
-    if (!paymentRecord) {
-      // Only apply penalty if there are arrears
-      const arrears = flat && typeof flat.arrears === 'number' ? flat.arrears : 0;
-      if (arrears <= 0) return 0;
+    // 1. If the resident STILL has arrears
+    const arrears = flat && typeof flat.arrears === 'number' ? flat.arrears : 0;
+    
+    if (arrears > 0) {
+      // If they made SOME payment but still have arrears (partial payment)
+      // the user explicitly requested to NOT add penalty for now ("we will handle it later")
+      if (paymentRecord) {
+        return 0;
+      }
 
+      // No payment made at all (defaulter) - penalize up to today
       const today = new Date();
       const daysLate = daysLateFrom(today);
-      if (daysLate > this.GRACE_PERIOD_DAYS) {
-        const penaltyDays = daysLate - this.GRACE_PERIOD_DAYS;
-        return penaltyDays * this.DAILY_PENALTY_RATE;
-      }
-      return 0;
+      return daysLate * this.DAILY_PENALTY_RATE;
     }
 
-    // Payment made - calculate time-based penalty up to payment date
-    const paymentDate = new Date(paymentRecord.transactionDate);
-    const daysLate = daysLateFrom(paymentDate);
-
-    if (daysLate > this.GRACE_PERIOD_DAYS) {
-      const penaltyDays = daysLate - this.GRACE_PERIOD_DAYS;
-      return penaltyDays * this.DAILY_PENALTY_RATE;
+    // 2. If the resident fully paid (arrears <= 0), but paid LATE,
+    // they get penalized up to the day they made the payment.
+    if (parsedPaymentDate) {
+      const daysLate = daysLateFrom(parsedPaymentDate);
+      return daysLate * this.DAILY_PENALTY_RATE;
     }
 
+    // 3. Paid on time, no arrears.
     return 0;
   }
 
